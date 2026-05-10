@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASA INTELIGENTE — ICEBERG INTERACTIVO</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════════════════════
+   TOKENS DE DISEÑO
+══════════════════════════════════════════════════ */
+:root {
+  --void:       #030508;
+  --ink:        #07090f;
+  --surface:    #0c1018;
+  --border:     rgba(255,255,255,0.06);
+  --border-hi:  rgba(255,255,255,0.12);
+
+  /* pisos */
+  --p4:         #00e5a0;   /* esmeralda fría */
+  --p4-dim:     rgba(0,229,160,0.08);
+  --p4-glow:    0 0 20px rgba(0,229,160,0.35), 0 0 60px rgba(0,229,160,0.12);
+
+  --p3:         #f0c040;   /* ámbar */
+  --p3-dim:     rgba(240,192,64,0.08);
+  --p3-glow:    0 0 20px rgba(240,192,64,0.35), 0 0 60px rgba(240,192,64,0.12);
+
+  --p2:         #c060ff;   /* violeta */
+  --p2-dim:     rgba(192,96,255,0.08);
+  --p2-glow:    0 0 20px rgba(192,96,255,0.35), 0 0 60px rgba(192,96,255,0.12);
+
+  --p1:         #ff2a4a;   /* rojo */
+  --p1-dim:     rgba(255,42,74,0.08);
+  --p1-glow:    0 0 20px rgba(255,42,74,0.35), 0 0 60px rgba(255,42,74,0.12);
+
+  --white:      #e8edf4;
+  --muted:      rgba(232,237,244,0.38);
+  --very-muted: rgba(232,237,244,0.15);
+
+  --mono:       'Space Mono', monospace;
+  --sans:       'Syne', sans-serif;
+  --dm:         'DM Mono', monospace;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--void);
+  font-family: var(--sans);
+  color: var(--white);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ══════════════════════════════════════════════════
+   CURSOR CUSTOM
+══════════════════════════════════════════════════ */
+#cursor {
+  position: fixed;
+  width: 10px; height: 10px;
+  background: var(--white);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%,-50%);
+  transition: width .15s, height .15s, background .15s, opacity .3s;
+  mix-blend-mode: difference;
+}
+#cursor.big { width: 36px; height: 36px; }
+
+/* ══════════════════════════════════════════════════
+   SCANLINES (sutiles)
+══════════════════════════════════════════════════ */
+body::after {
+  content:'';
+  position: fixed; inset:0;
+  pointer-events: none; z-index: 9998;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 3px
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   INTRO
+══════════════════════════════════════════════════ */
+#intro {
+  position: fixed; inset:0; z-index: 8000;
+  background: var(--void);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+  transition: opacity .7s ease, visibility .7s ease;
+}
+#intro.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+
+.intro-eyebrow {
+  font-family: var(--dm);
+  font-size: .65rem;
+  letter-spacing: .35em;
+  color: var(--p4);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fadeUp .5s .3s forwards;
+}
+.intro-heading {
+  font-family: var(--sans);
+  font-size: clamp(3.5rem, 11vw, 8rem);
+  font-weight: 800;
+  line-height: .9;
+  text-align: center;
+  letter-spacing: -.02em;
+  opacity: 0;
+  animation: fadeUp .6s .5s forwards;
+}
+.intro-heading span { color: var(--p4); }
+
+.boot-terminal {
+  margin-top: 48px;
+  width: min(440px, 90vw);
+  font-family: var(--dm);
+  font-size: .72rem;
+  color: var(--muted);
+  letter-spacing: .06em;
+  opacity: 0;
+  animation: fadeUp .4s .9s forwards;
+}
+.boot-line { padding: 3px 0; opacity:0; animation: fadeLine .3s forwards; }
+.boot-line:nth-child(1){ animation-delay:1.1s }
+.boot-line:nth-child(2){ animation-delay:1.5s }
+.boot-line:nth-child(3){ animation-delay:1.9s }
+.boot-line:nth-child(4){ animation-delay:2.3s; color: var(--p4); }
+.boot-line:nth-child(5){ animation-delay:2.7s }
+
+.btn-enter {
+  margin-top: 48px;
+  padding: 16px 60px;
+  background: var(--p4);
+  color: var(--void);
+  border: none;
+  font-family: var(--sans);
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  cursor: none;
+  transition: all .25s;
+  opacity: 0;
+  animation: fadeUp .4s 3s forwards;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.btn-enter:hover {
+  background: var(--white);
+  box-shadow: var(--p4-glow);
+  transform: translateY(-2px);
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes fadeLine {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+
+/* ══════════════════════════════════════════════════
+   HUD
+══════════════════════════════════════════════════ */
+#hud {
+  position: fixed; top:0; left:0; right:0; z-index:500;
+  height: 52px;
+  padding: 0 28px;
+  display: flex; align-items:center; justify-content:space-between;
+  background: rgba(3,5,8,.85);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.hud-logo {
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  color: var(--white);
+}
+.hud-logo span { color: var(--p4); }
+
+.hud-nav { display:flex; gap:4px; }
+.hud-btn {
+  font-family: var(--dm);
+  font-size: .6rem;
+  letter-spacing: .12em;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--very-muted);
+  cursor: none;
+  transition: all .2s;
+  text-transform: uppercase;
+}
+.hud-btn:hover,
+.hud-btn.active { color: var(--white); border-color: var(--border-hi); }
+.hud-btn[data-f="4"].active { color: var(--p4); border-color: rgba(0,229,160,.3); }
+.hud-btn[data-f="3"].active { color: var(--p3); border-color: rgba(240,192,64,.3); }
+.hud-btn[data-f="2"].active { color: var(--p2); border-color: rgba(192,96,255,.3); }
+.hud-btn[data-f="1"].active { color: var(--p1); border-color: rgba(255,42,74,.3); }
+
+.hud-status {
+  font-family: var(--dm);
+  font-size: .6rem;
+  color: var(--very-muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════
+   DEPTH BAR
+══════════════════════════════════════════════════ */
+#depth-bar {
+  position: fixed; bottom:0; left:0; right:0; z-index:400;
+  height: 3px;
+  background: rgba(255,255,255,.04);
+}
+#depth-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--p4), var(--p3), var(--p2), var(--p1));
+  transition: width .4s;
+  width: 0%;
+}
+
+/* ══════════════════════════════════════════════════
+   SKY / HERO
+══════════════════════════════════════════════════ */
+#sky {
+  height: 100vh;
+  background: radial-gradient(ellipse at 30% 60%, rgba(0,229,160,.04) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(192,96,255,.03) 0%, transparent 50%),
+              var(--void);
+  display: flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  position: relative; overflow:hidden;
+  padding-top: 52px;
+}
+#stars-canvas { position:absolute; inset:0; pointer-events:none; }
+
+.sky-content { position:relative; z-index:2; text-align:center; }
+.sky-kicker {
+  font-family: var(--dm);
+  font-size: .65rem;
+  letter-spacing: .4em;
+  color: var(--p4);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.sky-title {
+  font-family: var(--sans);
+  font-size: clamp(3rem, 9vw, 7rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: .92;
+}
+.sky-title em { font-style:normal; color: var(--p4); }
+.sky-subtitle {
+  margin-top: 20px;
+  font-family: var(--dm);
+  font-size: .8rem;
+  color: var(--muted);
+  letter-spacing: .08em;
+  max-width: 520px;
+  line-height: 1.7;
+}
+.sky-scroll {
+  position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+  font-family: var(--dm); font-size: .6rem;
+  letter-spacing: .2em; color: var(--very-muted);
+  text-transform: uppercase;
+  animation: scrollPulse 2.5s ease-in-out infinite;
+  z-index:2;
+}
+@keyframes scrollPulse {
+  0%,100% { opacity:.3; transform:translateX(-50%) translateY(0); }
+  50%      { opacity:.7; transform:translateX(-50%) translateY(6px); }
+}
+
+/* ══════════════════════════════════════════════════
+   HOUSE WRAPPER
+══════════════════════════════════════════════════ */
+#house { max-width: 1120px; margin: 0 auto; }
+
+/* ══════════════════════════════════════════════════
+   PISO
+══════════════════════════════════════════════════ */
+.floor {
+  position: relative;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.floor::before {
+  content:'';
+  position:absolute; left:0; top:0; bottom:0; width:3px;
+  background: var(--fc);
+  opacity: .6;
+}
+
+/* HEADER */
+.floor-header {
+  padding: 48px 48px 32px;
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+}
+@media(max-width:700px){ .floor-header{ grid-template-columns:60px 1fr; padding:32px 20px 24px; } }
+
+.floor-num {
+  font-family: var(--mono);
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--fc);
+  opacity: .18;
+  line-height: 1;
+}
+.floor-meta {}
+.floor-label {
+  font-family: var(--dm);
+  font-size: .6rem;
+  letter-spacing: .3em;
+  color: var(--fc);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  opacity: .6;
+}
+.floor-title {
+  font-family: var(--sans);
+  font-size: clamp(1.1rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--white);
+}
+.floor-desc {
+  margin-top: 5px;
+  font-family: var(--dm);
+  font-size: .72rem;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+.floor-depth-badge {
+  font-family: var(--dm);
+  font-size: .6rem;
+  letter-spacing: .12em;
+  padding: 6px 14px;
+  border: 1px solid;
+  color: var(--fc);
+  border-color: rgba(var(--fc-raw), .25);
+  opacity: .7;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+@media(max-width:700px){ .floor-depth-badge{ display:none; } }
+
+/* FLOOR COLORS */
+.floor-4 { --fc: var(--p4); --fc-raw: 0,229,160; background: linear-gradient(180deg, rgba(0,229,160,.025) 0%, var(--ink) 40%); }
+.floor-3 { --fc: var(--p3); --fc-raw: 240,192,64; background: linear-gradient(180deg, rgba(240,192,64,.025) 0%, var(--ink) 40%); }
+.floor-2 { --fc: var(--p2); --fc-raw: 192,96,255; background: linear-gradient(180deg, rgba(192,96,255,.03) 0%, var(--ink) 40%); }
+.floor-1 { --fc: var(--p1); --fc-raw: 255,42,74;  background: linear-gradient(180deg, rgba(255,42,74,.03) 0%, var(--ink) 40%); }
+
+/* CONTENT GRID */
+.floor-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  margin: 1px;
+}
+@media(max-width:700px){ .floor-content{ grid-template-columns:1fr; } }
+
+/* ══════════════════════════════════════════════════
+   ROOM
+══════════════════════════════════════════════════ */
+.room {
+  position: relative;
+  background: var(--ink);
+  min-height: 300px;
+  display: flex; flex-direction:column;
+  cursor: none;
+  overflow: hidden;
+  transition: background .25s;
+}
+.room::after {
+  content:'';
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--fc-raw),.05), transparent 65%);
+  opacity:0; transition: opacity .3s;
+  pointer-events:none;
+}
+.room:hover::after { opacity:1; }
+.room:hover { background: #0d1117; }
+
+.room-scene {
+  flex:1;
+  position:relative;
+  min-height:200px;
+}
+.room-scene svg {
+  position:absolute; inset:0;
+  width:100%; height:100%;
+}
+
+.room-foot {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items:center; justify-content:space-between;
+}
+.room-name {
+  font-family: var(--sans);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--fc);
+  text-transform: uppercase;
+}
+.room-hint {
+  font-family: var(--dm);
+  font-size: .58rem;
+  color: var(--very-muted);
+  letter-spacing: .06em;
+}
+
+/* hover lift */
+.room:hover .room-name { opacity:1; }
+
+/* ══════════════════════════════════════════════════
+   SEPARADORES
+══════════════════════════════════════════════════ */
+.floor-sep {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--sep-c), transparent);
+  animation: sepAnim 4s ease-in-out infinite;
+}
+@keyframes sepAnim { 0%,100%{opacity:.25} 50%{opacity:.7} }
+.sep-4 { --sep-c: var(--p4); }
+.sep-3 { --sep-c: var(--p3); }
+.sep-2 { --sep-c: var(--p2); }
+
+.water-line {
+  height: 56px;
+  position:relative; overflow:hidden;
+  background: linear-gradient(180deg, transparent, rgba(0,100,200,.07), transparent);
+  display:flex; align-items:center; justify-content:center;
+}
+.water-text {
+  font-family: var(--dm);
+  font-size: .55rem;
+  letter-spacing: .35em;
+  color: rgba(100,180,255,.35);
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: marquee 20s linear infinite;
+  position:absolute;
+}
+@keyframes marquee { from{transform:translateX(100vw)} to{transform:translateX(-100%)} }
+
+/* ══════════════════════════════════════════════════
+   PANEL LATERAL
+══════════════════════════════════════════════════ */
+#overlay {
+  position:fixed; inset:0; z-index:699;
+  background: rgba(0,0,0,.6);
+  opacity:0; pointer-events:none;
+  transition: opacity .3s;
+  backdrop-filter: blur(4px);
+}
+#overlay.show { opacity:1; pointer-events:all; }
+
+#info-panel {
+  position:fixed; right:0; top:0; bottom:0;
+  width: min(460px, 100vw);
+  z-index:700;
+  background: #090c12;
+  border-left: 1px solid var(--border-hi);
+  transform: translateX(100%);
+  transition: transform .4s cubic-bezier(.16,1,.3,1);
+  display:flex; flex-direction:column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.1) transparent;
+}
+#info-panel.open { transform:translateX(0); }
+
+/* panel accent strip */
+#info-panel::before {
+  content:'';
+  position:sticky; top:0;
+  display:block;
+  height: 3px;
+  background: var(--panel-color, var(--p4));
+  flex-shrink:0;
+  z-index:10;
+}
+
+.panel-close {
+  position:sticky; top:0;
+  align-self:flex-end;
+  margin: 16px 20px 0;
+  width: 32px; height:32px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border-hi);
+  color: var(--muted);
+  font-size: .9rem;
+  cursor:none;
+  display:flex; align-items:center; justify-content:center;
+  transition: all .2s;
+  z-index:10;
+  flex-shrink:0;
+}
+.panel-close:hover { background:rgba(255,255,255,.12); color:var(--white); }
+
+.panel-body { padding: 28px 32px 48px; }
+
+.panel-kicker {
+  font-family: var(--dm);
+  font-size: .58rem;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid rgba(var(--panel-raw,0,229,160),.2);
+  color: var(--panel-color, var(--p4));
+  background: rgba(var(--panel-raw,0,229,160),.04);
+  display:inline-block;
+  margin-bottom: 16px;
+}
+.panel-title {
+  font-family: var(--sans);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--white);
+  margin-bottom: 20px;
+  line-height: 1.1;
+}
+
+.panel-text {
+  font-family: var(--dm);
+  font-size: .82rem;
+  line-height: 1.8;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.panel-text strong { color: var(--white); font-weight:500; }
+.panel-text code {
+  font-family: var(--mono);
+  font-size: .75rem;
+  background: rgba(255,255,255,.06);
+  padding: 2px 6px;
+  border-radius: 2px;
+  color: var(--panel-color, var(--p4));
+}
+
+.callout {
+  border-left: 2px solid var(--panel-color, var(--p4));
+  padding: 14px 18px;
+  background: rgba(var(--panel-raw,0,229,160),.04);
+  margin: 20px 0;
+}
+.callout p {
+  font-family: var(--dm);
+  font-size: .8rem;
+  line-height: 1.75;
+  color: rgba(232,237,244,.65);
+}
+.callout strong { color: var(--white); }
+
+.stat-row {
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin: 20px 0;
+}
+.stat {
+  padding: 14px 10px;
+  border: 1px solid var(--border-hi);
+  text-align:center;
+  background: var(--surface);
+}
+.stat-n {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--panel-color, var(--p4));
+  line-height:1;
+}
+.stat-l {
+  font-family: var(--dm);
+  font-size: .56rem;
+  letter-spacing: .1em;
+  color: var(--very-muted);
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+/* VIDEO */
+.panel-video {
+  width:100%;
+  aspect-ratio: 16/9;
+  position:relative;
+  background: #000;
+  border: 1px solid var(--border-hi);
+  margin: 20px 0;
+  cursor: none;
+  overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:10px;
+  transition: border-color .2s;
+}
+.panel-video:hover { border-color: rgba(var(--panel-raw,0,229,160),.5); }
+.panel-video iframe {
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  border:none;
+}
+.video-placeholder {
+  display:flex; flex-direction:column;
+  align-items:center; gap:12px;
+  pointer-events:none;
+}
+.video-play {
+  width: 52px; height:52px;
+  border-radius:50%;
+  border: 2px solid rgba(255,255,255,.25);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem; color:var(--white);
+  transition: all .25s;
+}
+.panel-video:hover .video-play {
+  border-color: var(--panel-color);
+  color: var(--panel-color);
+  box-shadow: var(--p4-glow);
+}
+.video-label {
+  font-family: var(--dm);
+  font-size: .62rem;
+  letter-spacing: .12em;
+  color: var(--very-muted);
+  text-transform: uppercase;
+}
+
+/* FORM */
+.mini-form { margin: 20px 0; }
+.mini-form label {
+  display:block;
+  font-family: var(--dm);
+  font-size: .6rem;
+  letter-spacing: .15em;
+  color: var(--very-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+.mini-form input,
+.mini-form select {
+  width:100%;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  color: var(--white);
+  padding: 10px 14px;
+  font-family: var(--dm);
+  font-size: .8rem;
+  outline: none;
+  transition: border-color .2s;
+  -webkit-appearance:none;
+}
+.mini-form input:focus,
+.mini-form select:focus { border-color: var(--panel-color, var(--p4)); }
+.mini-form select option { background: #0c1018; }
+
+.mini-btn {
+  margin-top: 16px;
+  width:100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid var(--panel-color, var(--p4));
+  color: var(--panel-color, var(--p4));
+  font-family: var(--sans);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  cursor: none;
+  transition: all .2s;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.mini-btn:hover {
+  background: var(--panel-color, var(--p4));
+  color: var(--void);
+}
+
+.result-box {
+  display:none;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--panel-raw,0,229,160),.2);
+  background: rgba(var(--panel-raw,0,229,160),.04);
+  font-family: var(--dm);
+  font-size: .76rem;
+  line-height: 1.7;
+  color: var(--muted);
+  white-space: pre-line;
+}
+.result-box.show { display:block; }
+.result-box.ok { color: var(--p4); }
+.result-box.err { color: var(--p1); border-color: rgba(255,42,74,.25); background:rgba(255,42,74,.04); }
+
+/* QUIZ */
+.quiz-q {
+  font-family: var(--dm);
+  font-size: .85rem;
+  color: var(--white);
+  margin-bottom: 14px;
+  line-height:1.6;
+}
+.quiz-opts label {
+  display:block;
+  padding: 10px 14px;
+  margin: 5px 0;
+  border: 1px solid var(--border);
+  font-family: var(--dm);
+  font-size: .78rem;
+  cursor:none;
+  color: var(--muted);
+  transition: all .18s;
+}
+.quiz-opts label:hover { border-color: var(--border-hi); color:var(--white); background:rgba(255,255,255,.03); }
+.quiz-opts input { margin-right:10px; accent-color: var(--panel-color); }
+
+/* ══════════════════════════════════════════════════
+   BASEMENT
+══════════════════════════════════════════════════ */
+#basement {
+  max-width:1120px; margin:0 auto;
+  min-height: 50vh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding: 80px 40px;
+  text-align:center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,42,74,.06) 0%, transparent 60%), var(--void);
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+  position:relative; overflow:hidden;
+}
+.basement-title {
+  font-family: var(--sans);
+  font-size: clamp(2rem,7vw,5rem);
+  font-weight: 800;
+  letter-spacing:-.02em;
+  color: var(--p1);
+  margin-bottom: 12px;
+}
+.basement-sub {
+  font-family: var(--dm);
+  font-size: .72rem;
+  letter-spacing: .18em;
+  color: rgba(255,42,74,.4);
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+.bm-links {
+  display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+}
+.bm-link {
+  padding: 13px 32px;
+  border: 1px solid;
+  font-family: var(--sans);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: none;
+  transition: all .25s;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.bm-g { border-color: var(--p4); color: var(--p4); }
+.bm-g:hover { background: var(--p4); color: var(--void); box-shadow: var(--p4-glow); }
+.bm-y { border-color: var(--p3); color: var(--p3); }
+.bm-y:hover { background: var(--p3); color: var(--void); box-shadow: var(--p3-glow); }
+.bm-p { border-color: var(--p2); color: var(--p2); }
+.bm-p:hover { background: var(--p2); color: var(--white); box-shadow: var(--p2-glow); }
+
+/* ══════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════ */
+#toast {
+  position:fixed; bottom:24px; left:50%;
+  transform:translateX(-50%) translateY(60px);
+  background: rgba(9,12,18,.95);
+  border: 1px solid var(--border-hi);
+  font-family: var(--dm);
+  font-size: .7rem;
+  letter-spacing: .08em;
+  color: var(--muted);
+  padding: 10px 24px;
+  z-index: 9000;
+  white-space: nowrap;
+  transition: transform .35s cubic-bezier(.16,1,.3,1), opacity .35s;
+  pointer-events:none;
+  opacity:0;
+}
+#toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+#toast span { color: var(--p4); }
+
+/* ══════════════════════════════════════════════════
+   JUEGO SECRETO (Konami)
+══════════════════════════════════════════════════ */
+#secret-game {
+  position:fixed; inset:0; z-index:9500;
+  background: rgba(0,0,0,.97);
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:0;
+  font-family: var(--mono);
+}
+#secret-game.active { display:flex; }
+#secret-game canvas { border:1px solid rgba(0,229,160,.3); }
+.game-header {
+  font-size:.65rem; letter-spacing:.3em; color:var(--p4);
+  text-transform:uppercase; margin-bottom:16px;
+}
+.game-footer {
+  font-size:.6rem; letter-spacing:.15em; color:var(--very-muted);
+  margin-top:12px;
+}
+.game-score {
+  font-size:.75rem; letter-spacing:.2em; color:var(--white);
+  margin-bottom:8px;
+}
+
+/* ══════════════════════════════════════════════════
+   RIPPLE
+══════════════════════════════════════════════════ */
+.ripple-fx {
+  position:fixed; pointer-events:none; z-index:9000;
+  width:6px; height:6px; border-radius:50%;
+  background: var(--p4);
+  transform:translate(-50%,-50%);
+  animation: ripplePop .5s ease-out forwards;
+}
+@keyframes ripplePop {
+  to { width:50px; height:50px; opacity:0; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cursor"></div>
+
+<!-- JUEGO SECRETO -->
+<div id="secret-game">
+  <div class="game-header">// ARCHIVO CIFRADO DESBLOQUEADO //</div>
+  <div class="game-score" id="game-score">PUNTOS: 0</div>
+  <canvas id="game-canvas" width="420" height="360"></canvas>
+  <div class="game-footer">FLECHAS para mover — ESC para salir — No guardes datos personales en tu router</div>
+</div>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="intro-eyebrow">Sistema de visualizacion interactiva v2.4</div>
+  <div class="intro-heading">CASA<br><span>INTELIGENTE</span></div>
+  <div class="boot-terminal">
+    <div class="boot-line">[ OK ] Cargando protocolo Matter 1.3 + Thread...</div>
+    <div class="boot-line">[ OK ] Conectando 4 capas de informacion...</div>
+    <div class="boot-line">[ OK ] Indexando 9 habitaciones interactivas...</div>
+    <div class="boot-line">[ AVISO ] La profundidad aumenta el conocimiento</div>
+    <div class="boot-line">[ OK ] Sistema listo. Bienvenido.</div>
+  </div>
+  <button class="btn-enter" onclick="enterHouse()">Entrar al sistema</button>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-logo">CASA<span>.EXE</span></div>
+  <nav class="hud-nav">
+    <button class="hud-btn" data-f="4" onclick="scrollToFloor(4)">Piso 4</button>
+    <button class="hud-btn" data-f="3" onclick="scrollToFloor(3)">Piso 3</button>
+    <button class="hud-btn" data-f="2" onclick="scrollToFloor(2)">Piso 2</button>
+    <button class="hud-btn" data-f="1" onclick="scrollToFloor(1)">Piso 1</button>
+  </nav>
+  <div class="hud-status" id="hud-status">Exterior</div>
+</div>
+
+<!-- DEPTH BAR -->
+<div id="depth-bar"><div id="depth-fill"></div></div>
+
+<!-- HERO -->
+<section id="sky">
+  <canvas id="stars-canvas"></canvas>
+  <div class="sky-content">
+    <div class="sky-kicker">Iceberg interactivo de domótica</div>
+    <h1 class="sky-title">CASA<br><em>INTELIGENTE</em></h1>
+    <p class="sky-subtitle">Cuatro pisos de información. Cada nivel profundiza más. Haz clic en cada habitación y explora lo que no se ve en ninguna guía de compras.</p>
+  </div>
+  <div class="sky-scroll">Desplaza para entrar</div>
+</section>
+
+<!-- HOUSE -->
+<div id="house">
+
+<!-- ══════════════════════════════════
+     PISO 4 — CONCEPTOS BASE
+══════════════════════════════════ -->
+<section class="floor floor-4" id="floor4" data-floor="4">
+  <div class="floor-header">
+    <div class="floor-num">04</div>
+    <div class="floor-meta">
+      <div class="floor-label">Nivel superficial — Conceptos base</div>
+      <div class="floor-title">Que es una casa inteligente</div>
+      <div class="floor-desc">El punto de entrada: qué compras, qué conectas, qué esperar de verdad</div>
+    </div>
+    <div class="floor-depth-badge">Profundidad mínima</div>
+  </div>
+  <div class="floor-content">
+
+    <!-- SALA DE CONTROL -->
+    <div class="room" onclick="openPanel('control')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#060d06"/>
+          <rect x="14" y="18" width="272" height="148" rx="3" fill="#07110a" stroke="rgba(0,229,160,.2)" stroke-width="1"/>
+          <rect x="20" y="24" width="260" height="136" rx="2" fill="#060e08"/>
+          <!-- top widget row -->
+          <rect x="28" y="32" width="72" height="38" rx="2" fill="#060e07" stroke="rgba(0,229,160,.15)" stroke-width=".8"/>
+          <text x="64" y="47" text-anchor="middle" fill="#00e5a0" font-family="monospace" font-size="11" font-weight="bold">22.4°</text>
+          <text x="64" y="60" text-anchor="middle" fill="rgba(0,229,160,.4)" font-family="monospace" font-size="6">SALA — TEMP</text>
+
+          <rect x="108" y="32" width="72" height="38" rx="2" fill="#060e07" stroke="rgba(0,229,160,.15)" stroke-width=".8"/>
+          <rect x="114" y="38" width="50" height="7" rx="1" fill="rgba(0,229,160,.06)" stroke="rgba(0,229,160,.15)" stroke-width=".5"/>
+          <rect x="114" y="38" width="38" height="7" rx="1" fill="rgba(0,229,160,.35)"/>
+          <text x="144" y="60" text-anchor="middle" fill="rgba(0,229,160,.4)" font-family="monospace" font-size="6">BATERÍA 76%</text>
+
+          <rect x="188" y="32" width="72" height="38" rx="2" fill="#060e07" stroke="rgba(0,229,160,.15)" stroke-width=".8"/>
+          <text x="224" y="48" text-anchor="middle" fill="#00e5a0" font-family="monospace" font-size="9">1.82 kW</text>
+          <text x="224" y="60" text-anchor="middle" fill="rgba(0,229,160,.4)" font-family="monospace" font-size="6">CONSUMO AHORA</text>
+
+          <!-- chart -->
+          <polyline points="28,130 54,118 80,123 106,110 132,102 158,106 184,95 210,88 236,84 262,87 272,83"
+            fill="none" stroke="rgba(0,229,160,.6)" stroke-width="1.3"/>
+          <polyline points="28,130 54,118 80,123 106,110 132,102 158,106 184,95 210,88 236,84 262,87 272,83 272,148 28,148"
+            fill="rgba(0,229,160,.05)"/>
+
+          <!-- blink cursor -->
+          <circle cx="272" cy="83" r="2.5" fill="#00e5a0">
+            <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite"/>
+          </circle>
+
+          <!-- desk -->
+          <rect x="40" y="182" width="220" height="8" rx="1" fill="#0a180a"/>
+          <rect x="130" y="190" width="12" height="14" fill="#0a180a"/>
+          <rect x="158" y="190" width="12" height="14" fill="#0a180a"/>
+          <!-- laptop hint -->
+          <rect x="120" y="172" width="60" height="10" rx="1" fill="#0c1c0c" stroke="rgba(0,229,160,.12)" stroke-width=".5"/>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Dashboard Central</span>
+        <span class="room-hint">clic para explorar</span>
+      </div>
+    </div>
+
+    <!-- SENSORES -->
+    <div class="room" onclick="openPanel('sensores')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#060d06"/>
+          <!-- grid backdrop -->
+          <g opacity=".04" stroke="#00e5a0" stroke-width=".6">
+            <line x1="0" y1="42" x2="300" y2="42"/><line x1="0" y1="84" x2="300" y2="84"/>
+            <line x1="0" y1="126" x2="300" y2="126"/><line x1="0" y1="168" x2="300" y2="168"/>
+            <line x1="60" y1="0" x2="60" y2="210"/><line x1="120" y1="0" x2="120" y2="210"/>
+            <line x1="180" y1="0" x2="180" y2="210"/><line x1="240" y1="0" x2="240" y2="210"/>
+          </g>
+          <!-- sensor nodes 3 -->
+          <circle cx="75" cy="65" r="22" fill="none" stroke="rgba(0,229,160,.3)" stroke-width="1.2"/>
+          <circle cx="75" cy="65" r="12" fill="rgba(0,229,160,.08)" stroke="rgba(0,229,160,.4)" stroke-width="1"/>
+          <circle cx="75" cy="65" r="4" fill="rgba(0,229,160,.7)">
+            <animate attributeName="r" values="4;7;4" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="75" y="97" text-anchor="middle" fill="rgba(0,229,160,.5)" font-family="monospace" font-size="7">mmWave</text>
+
+          <circle cx="150" cy="65" r="22" fill="none" stroke="rgba(0,229,160,.3)" stroke-width="1.2"/>
+          <circle cx="150" cy="65" r="12" fill="rgba(0,229,160,.08)" stroke="rgba(0,229,160,.4)" stroke-width="1"/>
+          <circle cx="150" cy="65" r="4" fill="rgba(0,229,160,.7)"/>
+          <text x="150" y="97" text-anchor="middle" fill="rgba(0,229,160,.5)" font-family="monospace" font-size="7">Temp / CO2</text>
+
+          <circle cx="225" cy="65" r="22" fill="none" stroke="rgba(0,229,160,.3)" stroke-width="1.2"/>
+          <circle cx="225" cy="65" r="12" fill="rgba(0,229,160,.08)" stroke="rgba(0,229,160,.4)" stroke-width="1"/>
+          <circle cx="225" cy="65" r="4" fill="rgba(0,229,160,.7)">
+            <animate attributeName="r" values="4;6;4" dur="1.6s" repeatCount="indefinite"/>
+          </circle>
+          <text x="225" y="97" text-anchor="middle" fill="rgba(0,229,160,.5)" font-family="monospace" font-size="7">Apertura</text>
+
+          <!-- connecting lines animated -->
+          <path d="M 97 65 L 128 65" stroke="rgba(0,229,160,.2)" stroke-width=".8" stroke-dasharray="4,3">
+            <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+          </path>
+          <path d="M 172 65 L 203 65" stroke="rgba(0,229,160,.2)" stroke-width=".8" stroke-dasharray="4,3">
+            <animate attributeName="stroke-dashoffset" values="0;-14" dur="1.3s" repeatCount="indefinite"/>
+          </path>
+
+          <!-- floor plan bottom -->
+          <rect x="28" y="120" width="244" height="70" rx="2" fill="none" stroke="rgba(0,229,160,.08)" stroke-width="1"/>
+          <line x1="130" y1="120" x2="130" y2="190" stroke="rgba(0,229,160,.08)" stroke-width=".8"/>
+          <text x="79" y="159" text-anchor="middle" fill="rgba(0,229,160,.18)" font-family="monospace" font-size="7">SALA</text>
+          <text x="189" y="159" text-anchor="middle" fill="rgba(0,229,160,.18)" font-family="monospace" font-size="7">RECÁMARA</text>
+          <!-- sensor dots on floor plan -->
+          <circle cx="79" cy="142" r="4" fill="rgba(0,229,160,.5)"/>
+          <circle cx="189" cy="142" r="4" fill="rgba(0,229,160,.5)">
+            <animate attributeName="opacity" values="1;.2;1" dur="1.8s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Red de Sensores</span>
+        <span class="room-hint">quiz incluido</span>
+      </div>
+    </div>
+
+    <!-- ASISTENTE DE VOZ -->
+    <div class="room" onclick="openPanel('voz')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#060d06"/>
+          <!-- Echo-like cylinder -->
+          <rect x="115" y="38" width="70" height="130" rx="35" fill="#060e07" stroke="rgba(0,229,160,.25)" stroke-width="1.5"/>
+          <!-- LED ring at bottom -->
+          <ellipse cx="150" cy="168" rx="35" ry="8" fill="none" stroke="#00e5a0" stroke-width="2.5" opacity=".4" stroke-dasharray="18,6">
+            <animateTransform attributeName="transform" type="rotate" values="0 150 168;360 150 168" dur="5s" repeatCount="indefinite"/>
+          </ellipse>
+          <!-- glow pulse -->
+          <ellipse cx="150" cy="168" rx="35" ry="8" fill="none" stroke="#00e5a0" stroke-width="1">
+            <animate attributeName="rx" values="35;60;35" dur="2.5s" repeatCount="indefinite"/>
+            <animate attributeName="ry" values="8;14;8" dur="2.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".3;0;.3" dur="2.5s" repeatCount="indefinite"/>
+          </ellipse>
+          <!-- sound waves left -->
+          <path d="M 105 80 Q 92 95 105 110" fill="none" stroke="rgba(0,229,160,.35)" stroke-width="1.5"/>
+          <path d="M 90 70 Q 72 95 90 120" fill="none" stroke="rgba(0,229,160,.2)" stroke-width="1.5"/>
+          <!-- sound waves right -->
+          <path d="M 195 80 Q 208 95 195 110" fill="none" stroke="rgba(0,229,160,.35)" stroke-width="1.5"/>
+          <path d="M 210 70 Q 228 95 210 120" fill="none" stroke="rgba(0,229,160,.2)" stroke-width="1.5"/>
+          <!-- chat bubble -->
+          <rect x="22" y="22" width="96" height="24" rx="12" fill="rgba(0,229,160,.07)" stroke="rgba(0,229,160,.2)" stroke-width=".8"/>
+          <text x="70" y="38" text-anchor="middle" fill="rgba(0,229,160,.6)" font-family="monospace" font-size="7">"Enciende la sala"</text>
+          <!-- response bubble -->
+          <rect x="184" y="22" width="96" height="24" rx="12" fill="rgba(0,229,160,.12)" stroke="rgba(0,229,160,.3)" stroke-width=".8"/>
+          <text x="232" y="38" text-anchor="middle" fill="rgba(0,229,160,.8)" font-family="monospace" font-size="7">Hecho. 2700K</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Asistentes de Voz</span>
+        <span class="room-hint">simula un comando</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="floor-sep sep-4"></div>
+
+<!-- ══════════════════════════════════
+     PISO 3 — SISTEMAS Y TECNOLOGÍA
+══════════════════════════════════ -->
+<section class="floor floor-3" id="floor3" data-floor="3">
+  <div class="floor-header">
+    <div class="floor-num">03</div>
+    <div class="floor-meta">
+      <div class="floor-label">Nivel intermedio — Tecnología real</div>
+      <div class="floor-title">Energia, Seguridad e IA climática</div>
+      <div class="floor-desc">Lo que está detrás de cada interruptor inteligente que compras en Amazon</div>
+    </div>
+    <div class="floor-depth-badge">Profundidad media</div>
+  </div>
+  <div class="floor-content">
+
+    <!-- ENERGÍA -->
+    <div class="room" onclick="openPanel('energia')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#111000"/>
+          <!-- paneles solares -->
+          <rect x="15" y="20" width="60" height="35" rx="2" fill="#131000" stroke="rgba(240,192,64,.3)" stroke-width="1"/>
+          <g stroke="rgba(240,192,64,.2)" stroke-width=".5">
+            <line x1="15" y1="37" x2="75" y2="37"/>
+            <line x1="35" y1="20" x2="35" y2="55"/>
+            <line x1="55" y1="20" x2="55" y2="55"/>
+          </g>
+          <text x="45" y="66" text-anchor="middle" fill="rgba(240,192,64,.5)" font-family="monospace" font-size="6.5">2.4 kW</text>
+
+          <!-- batería -->
+          <rect x="108" y="16" width="84" height="56" rx="3" fill="#121000" stroke="rgba(240,192,64,.4)" stroke-width="1.5"/>
+          <rect x="192" y="30" width="8" height="14" rx="2" fill="rgba(240,192,64,.3)"/>
+          <rect x="115" y="23" width="62" height="42" rx="2" fill="rgba(240,192,64,.08)"/>
+          <rect x="115" y="23" width="54" height="42" rx="2" fill="rgba(240,192,64,.18)"/>
+          <text x="150" y="42" text-anchor="middle" fill="#f0c040" font-family="monospace" font-size="11" font-weight="bold">87%</text>
+          <text x="150" y="56" text-anchor="middle" fill="rgba(240,192,64,.45)" font-family="monospace" font-size="6">13.5 kWh</text>
+
+          <!-- red -->
+          <rect x="225" y="20" width="60" height="35" rx="2" fill="#121000" stroke="rgba(240,192,64,.2)" stroke-width="1"/>
+          <text x="255" y="40" text-anchor="middle" fill="rgba(240,192,64,.45)" font-family="monospace" font-size="7">RED</text>
+          <text x="255" y="51" text-anchor="middle" fill="rgba(240,192,64,.3)" font-family="monospace" font-size="6">127V</text>
+
+          <!-- flechas animadas -->
+          <path d="M 75 37 Q 90 37 108 37" fill="none" stroke="#f0c040" stroke-width="1.3" stroke-dasharray="5,3">
+            <animate attributeName="stroke-dashoffset" values="0;-16" dur=".7s" repeatCount="indefinite"/>
+          </path>
+          <path d="M 192 44 Q 212 44 225 40" fill="none" stroke="rgba(240,192,64,.5)" stroke-width="1.2" stroke-dasharray="5,3">
+            <animate attributeName="stroke-dashoffset" values="0;-16" dur="1.1s" repeatCount="indefinite"/>
+          </path>
+
+          <!-- house icon consuming -->
+          <polygon points="150,115 110,155 190,155" fill="none" stroke="rgba(240,192,64,.18)" stroke-width="1.2"/>
+          <rect x="132" y="146" width="36" height="19" fill="none" stroke="rgba(240,192,64,.18)" stroke-width="1"/>
+          <!-- vertical energy line -->
+          <path d="M 150 88 L 150 115" fill="none" stroke="#f0c040" stroke-width="1.3" stroke-dasharray="5,3">
+            <animate attributeName="stroke-dashoffset" values="0;-16" dur=".5s" repeatCount="indefinite"/>
+          </path>
+
+          <text x="150" y="190" text-anchor="middle" fill="rgba(240,192,64,.3)" font-family="monospace" font-size="7">CONSUMO AHORA: 1.82 kW</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Gestion de Energía</span>
+        <span class="room-hint">calcula tu ahorro</span>
+      </div>
+    </div>
+
+    <!-- SEGURIDAD -->
+    <div class="room" onclick="openPanel('seguridad')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#111000"/>
+          <!-- camera body -->
+          <rect x="18" y="18" width="48" height="28" rx="3" fill="#131000" stroke="rgba(240,192,64,.35)" stroke-width="1.2"/>
+          <circle cx="33" cy="32" r="9" fill="#0a0800" stroke="rgba(240,192,64,.4)" stroke-width="1"/>
+          <circle cx="33" cy="32" r="4" fill="rgba(240,192,64,.2)"/>
+          <circle cx="33" cy="32" r="1.5" fill="#f0c040" opacity=".7"/>
+          <!-- lens -->
+          <path d="M 66 25 L 90 28 L 90 38 L 66 44" fill="#0f0e00" stroke="rgba(240,192,64,.3)" stroke-width="1"/>
+          <!-- FOV cone -->
+          <path d="M 90 33 L 260 5 L 260 90 Z" fill="rgba(240,192,64,.025)" stroke="rgba(240,192,64,.08)" stroke-width=".5" stroke-dasharray="4,4"/>
+          <!-- live badge -->
+          <circle cx="269" cy="28" r="5" fill="#f0c040" opacity=".8">
+            <animate attributeName="opacity" values=".8;.3;.8" dur="1.4s" repeatCount="indefinite"/>
+          </circle>
+          <text x="269" y="41" text-anchor="middle" fill="rgba(240,192,64,.5)" font-family="monospace" font-size="5.5">LIVE</text>
+
+          <!-- fingerprint lock -->
+          <rect x="112" y="90" width="76" height="100" rx="4" fill="#100f00" stroke="rgba(240,192,64,.4)" stroke-width="1.5"/>
+          <g transform="translate(150,140)" fill="none" stroke="#f0c040" stroke-width=".9" opacity=".65">
+            <path d="M 0,-22 Q 18,-20 20,0 Q 18,20 0,22 Q -18,20 -20,0 Q -18,-20 0,-22"/>
+            <path d="M 0,-14 Q 12,-12 13,0 Q 12,12 0,14 Q -12,12 -13,0 Q -12,-12 0,-14"/>
+            <path d="M 0,-7 Q 5,-6 6,0 Q 5,6 0,7 Q -5,6 -6,0 Q -5,-6 0,-7"/>
+            <circle cx="0" cy="0" r="1.5" fill="#f0c040"/>
+          </g>
+          <text x="150" y="197" text-anchor="middle" fill="rgba(240,192,64,.3)" font-family="monospace" font-size="6.5">ACCESO Z-WAVE AES-128</text>
+
+          <!-- face detection placeholder -->
+          <rect x="215" y="95" width="72" height="72" fill="none" stroke="rgba(240,192,64,.25)" stroke-width=".8" stroke-dasharray="5,3"/>
+          <g stroke="#f0c040" stroke-width="1.2" fill="none" opacity=".5">
+            <polyline points="215,95 215,107"/><polyline points="215,95 227,95"/>
+            <polyline points="287,95 287,107"/><polyline points="287,95 275,95"/>
+            <polyline points="215,167 215,155"/><polyline points="215,167 227,167"/>
+            <polyline points="287,167 287,155"/><polyline points="287,167 275,167"/>
+          </g>
+          <text x="251" y="136" text-anchor="middle" fill="rgba(240,192,64,.3)" font-family="monospace" font-size="6">ANALIZANDO</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Seguridad Inteligente</span>
+        <span class="room-hint">test de tu red WiFi</span>
+      </div>
+    </div>
+
+    <!-- CLIMATIZACIÓN -->
+    <div class="room" onclick="openPanel('clima')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#111000"/>
+          <!-- thermostat ring -->
+          <circle cx="150" cy="105" r="72" fill="#100f00" stroke="rgba(240,192,64,.15)" stroke-width="1"/>
+          <circle cx="150" cy="105" r="62" fill="#0c0c00"/>
+          <!-- arc bg -->
+          <circle cx="150" cy="105" r="54" fill="none" stroke="rgba(240,192,64,.08)" stroke-width="6"/>
+          <!-- progress arc -->
+          <circle cx="150" cy="105" r="54" fill="none" stroke="#f0c040" stroke-width="5"
+            stroke-dasharray="220 339" stroke-dashoffset="260" stroke-linecap="round"
+            transform="rotate(-220 150 105)">
+            <animate attributeName="stroke-dasharray" values="120 339;220 339;120 339" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <!-- temp label -->
+          <text x="150" y="98" text-anchor="middle" fill="#f0c040" font-family="monospace" font-size="26" font-weight="bold">22°</text>
+          <text x="150" y="115" text-anchor="middle" fill="rgba(240,192,64,.45)" font-family="monospace" font-size="7.5">SETPOINT</text>
+          <!-- outside temp -->
+          <text x="150" y="130" text-anchor="middle" fill="rgba(240,192,64,.3)" font-family="monospace" font-size="6.5">exterior 18°</text>
+          <!-- mode dots -->
+          <circle cx="100" cy="168" r="4" fill="rgba(240,192,64,.2)" stroke="rgba(240,192,64,.3)" stroke-width="1"/>
+          <text x="100" y="180" text-anchor="middle" fill="rgba(240,192,64,.35)" font-family="monospace" font-size="6">frío</text>
+          <circle cx="150" cy="168" r="5" fill="#f0c040" opacity=".6"/>
+          <text x="150" y="180" text-anchor="middle" fill="rgba(240,192,64,.6)" font-family="monospace" font-size="6">auto</text>
+          <circle cx="200" cy="168" r="4" fill="rgba(240,192,64,.2)" stroke="rgba(240,192,64,.3)" stroke-width="1"/>
+          <text x="200" y="180" text-anchor="middle" fill="rgba(240,192,64,.35)" font-family="monospace" font-size="6">calor</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Termostato Inteligente</span>
+        <span class="room-hint">recomendacion por ciudad</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="floor-sep sep-3"></div>
+<div class="water-line"><div class="water-text">CRUZANDO LA SUPERFICIE — INFORMACION MAS PROFUNDA ABAJO — CRUZANDO LA SUPERFICIE — INFORMACION MAS PROFUNDA ABAJO</div></div>
+<div class="floor-sep sep-2"></div>
+
+<!-- ══════════════════════════════════
+     PISO 2 — INFRAESTRUCTURA TÉCNICA
+══════════════════════════════════ -->
+<section class="floor floor-2" id="floor2" data-floor="2">
+  <div class="floor-header">
+    <div class="floor-num">02</div>
+    <div class="floor-meta">
+      <div class="floor-label">Zona avanzada — Infraestructura técnica</div>
+      <div class="floor-title">Datos, Redes y Vulnerabilidades</div>
+      <div class="floor-desc">Lo que no ves pero sostiene todo. Zona técnica con casos reales documentados</div>
+    </div>
+    <div class="floor-depth-badge">Profundidad alta</div>
+  </div>
+  <div class="floor-content">
+
+    <!-- DATOS -->
+    <div class="room" onclick="openPanel('datos')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#0a0018"/>
+          <!-- server rack -->
+          <rect x="22" y="18" width="88" height="160" rx="3" fill="#0e0020" stroke="rgba(192,96,255,.25)" stroke-width="1.2"/>
+          <g fill="none" stroke="rgba(192,96,255,.12)" stroke-width=".6">
+            <rect x="30" y="28" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="44" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="60" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="76" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="92" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="108" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="124" width="72" height="11" rx="1.5"/>
+            <rect x="30" y="140" width="72" height="11" rx="1.5"/>
+          </g>
+          <g>
+            <circle cx="34" cy="33.5" r="2.5" fill="#00e5a0"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" repeatCount="indefinite"/></circle>
+            <circle cx="34" cy="49.5" r="2.5" fill="#00e5a0"><animate attributeName="opacity" values="1;.2;1" dur="1.8s" repeatCount="indefinite"/></circle>
+            <circle cx="34" cy="65.5" r="2.5" fill="#f0c040"><animate attributeName="opacity" values="1;.2;1" dur="2.2s" repeatCount="indefinite"/></circle>
+            <circle cx="34" cy="81.5" r="2.5" fill="#00e5a0"><animate attributeName="opacity" values="1;.2;1" dur=".9s" repeatCount="indefinite"/></circle>
+            <circle cx="34" cy="97.5" r="2.5" fill="#00e5a0"><animate attributeName="opacity" values="1;.2;1" dur="1.5s" repeatCount="indefinite"/></circle>
+          </g>
+          <!-- binary streams -->
+          <g fill="rgba(192,96,255,.22)" font-family="monospace" font-size="7">
+            <text x="124" y="30">01101001</text>
+            <text x="124" y="46">11001010</text>
+            <text x="124" y="62">00110101</text>
+            <text x="124" y="78">10101100</text>
+            <text x="124" y="94">01110011</text>
+            <text x="200" y="30">10100110</text>
+            <text x="200" y="46">00011101</text>
+            <text x="200" y="62">11010001</text>
+            <text x="200" y="78">01001110</text>
+          </g>
+          <!-- cloud -->
+          <ellipse cx="252" cy="148" rx="40" ry="22" fill="#0c001e" stroke="rgba(192,96,255,.3)" stroke-width="1.2"/>
+          <text x="252" y="150" text-anchor="middle" fill="rgba(192,96,255,.5)" font-family="monospace" font-size="6.5">AWS / AZURE</text>
+          <text x="252" y="162" text-anchor="middle" fill="rgba(192,96,255,.3)" font-family="monospace" font-size="6">us-east-1</text>
+          <!-- arrow to cloud -->
+          <path d="M 168 80 Q 220 100 215 130" fill="none" stroke="rgba(192,96,255,.35)" stroke-width="1.2" stroke-dasharray="4,3">
+            <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+          </path>
+          <text x="150" y="192" text-anchor="middle" fill="rgba(192,96,255,.3)" font-family="monospace" font-size="7">60 GB / MES POR HOGAR</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Tus Datos en la Nube</span>
+        <span class="room-hint">adónde van</span>
+      </div>
+    </div>
+
+    <!-- RED MESH -->
+    <div class="room" onclick="openPanel('mesh')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#0a0018"/>
+          <!-- mesh connections -->
+          <g stroke="rgba(192,96,255,.18)" stroke-width=".8" fill="none">
+            <line x1="150" y1="105" x2="68" y2="50"/>
+            <line x1="150" y1="105" x2="232" y2="50"/>
+            <line x1="150" y1="105" x2="44" y2="148"/>
+            <line x1="150" y1="105" x2="256" y2="148"/>
+            <line x1="150" y1="105" x2="150" y2="184"/>
+            <line x1="68" y1="50" x2="232" y2="50"/>
+            <line x1="68" y1="50" x2="44" y2="148"/>
+            <line x1="232" y1="50" x2="256" y2="148"/>
+            <line x1="44" y1="148" x2="150" y2="184"/>
+            <line x1="256" y1="148" x2="150" y2="184"/>
+          </g>
+          <!-- animated packet -->
+          <circle r="3" fill="#c060ff" opacity=".8">
+            <animateMotion dur="2.8s" repeatCount="indefinite" path="M 150 105 L 68 50 L 232 50 L 150 105"/>
+          </circle>
+          <!-- hub -->
+          <circle cx="150" cy="105" r="14" fill="#1a003a" stroke="#c060ff" stroke-width="2"/>
+          <text x="150" y="109" text-anchor="middle" fill="#c060ff" font-family="monospace" font-size="6.5">HUB</text>
+          <!-- nodes -->
+          <g fill="#0e001e" stroke="#c060ff" stroke-width="1.4">
+            <circle cx="68" cy="50" r="11"/>
+            <circle cx="232" cy="50" r="11"/>
+            <circle cx="44" cy="148" r="11"/>
+            <circle cx="256" cy="148" r="11"/>
+            <circle cx="150" cy="184" r="11"/>
+          </g>
+          <g font-family="monospace" font-size="5.5" fill="#c060ff" text-anchor="middle">
+            <text x="68" y="54">CAM</text>
+            <text x="232" y="54">THM</text>
+            <text x="44" y="152">LCK</text>
+            <text x="256" y="152">SPK</text>
+            <text x="150" y="188">TV</text>
+          </g>
+          <!-- pulse -->
+          <circle cx="150" cy="105" r="18" fill="none" stroke="#c060ff" stroke-width=".6">
+            <animate attributeName="r" values="14;55;14" dur="3s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".5;0;.5" dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <text x="150" y="20" text-anchor="middle" fill="rgba(192,96,255,.3)" font-family="monospace" font-size="6.5">ZIGBEE MESH — 2.4 GHz</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Red Zigbee Mesh</span>
+        <span class="room-hint">topología en vivo</span>
+      </div>
+    </div>
+
+    <!-- VULNERABILIDADES -->
+    <div class="room" onclick="openPanel('hacking')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#0a0018"/>
+          <!-- terminal -->
+          <rect x="16" y="14" width="268" height="162" rx="4" fill="#050010" stroke="rgba(192,96,255,.3)" stroke-width="1.5"/>
+          <!-- menubar -->
+          <rect x="16" y="14" width="268" height="16" rx="4" fill="#0c0022"/>
+          <circle cx="29" cy="22" r="4" fill="rgba(255,50,50,.5)"/>
+          <circle cx="43" cy="22" r="4" fill="rgba(255,200,50,.5)"/>
+          <circle cx="57" cy="22" r="4" fill="rgba(50,200,50,.5)"/>
+          <!-- terminal lines -->
+          <g font-family="monospace" font-size="7.5">
+            <text x="26" y="46" fill="rgba(192,96,255,.7)">$ nmap -sV 192.168.1.0/24</text>
+            <text x="26" y="60" fill="rgba(192,96,255,.35)">Iniciando Nmap 7.94 ...</text>
+            <text x="26" y="74" fill="rgba(192,96,255,.35)">Scanning 254 hosts...</text>
+            <text x="26" y="88" fill="rgba(255,60,80,.9)">PUERTO 23 ABIERTO (Telnet)</text>
+            <text x="26" y="102" fill="rgba(255,60,80,.9)">CREDENCIALES: admin / admin</text>
+            <text x="26" y="116" fill="rgba(192,96,255,.55)">Dispositivo: Ezviz C3W Pro</text>
+            <text x="26" y="130" fill="rgba(192,96,255,.55)">CVE-2023-2705: CONFIRMADO</text>
+            <text x="26" y="144" fill="rgba(240,192,64,.7)">67% dispositivos vulnerables</text>
+            <text x="26" y="158" fill="rgba(192,96,255,.3)">$ _<animate attributeName="opacity" values=".3;1;.3" dur=".7s" repeatCount="indefinite"/></text>
+          </g>
+          <!-- disclaimer -->
+          <rect x="16" y="176" width="268" height="22" fill="#060014"/>
+          <text x="150" y="190" text-anchor="middle" fill="rgba(192,96,255,.3)" font-family="monospace" font-size="6">SIMULACION EDUCATIVA — SOLO PARA FINES DIDACTICOS</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Vulnerabilidades IoT</span>
+        <span class="room-hint">casos reales</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="floor-sep" style="--sep-c: var(--p1);"></div>
+
+<!-- ══════════════════════════════════
+     PISO 1 — ZONA PROFUNDA
+══════════════════════════════════ -->
+<section class="floor floor-1" id="floor1" data-floor="1">
+  <div class="floor-header">
+    <div class="floor-num">01</div>
+    <div class="floor-meta">
+      <div class="floor-label">Zona mas profunda — Informacion clasificada</div>
+      <div class="floor-title">Espionaje, Psicología y Futuro distópico</div>
+      <div class="floor-desc">Lo que las empresas no quieren que sepas. Documentado, citado y verificable</div>
+    </div>
+    <div class="floor-depth-badge">Maximo nivel</div>
+  </div>
+  <div class="floor-content">
+
+    <!-- ESPIONAJE -->
+    <div class="room" onclick="openPanel('espio')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#100003"/>
+          <!-- large eye -->
+          <ellipse cx="150" cy="105" rx="100" ry="55" fill="none" stroke="rgba(255,42,74,.2)" stroke-width="1.2"/>
+          <ellipse cx="150" cy="105" rx="80" ry="42" fill="#110003"/>
+          <!-- iris -->
+          <circle cx="150" cy="105" r="32" fill="#0d0002" stroke="rgba(255,42,74,.5)" stroke-width="1.8"/>
+          <circle cx="150" cy="105" r="20" fill="#080001" stroke="rgba(255,42,74,.3)" stroke-width="1"/>
+          <!-- pupil -->
+          <circle cx="150" cy="105" r="9" fill="#ff2a4a" opacity=".8">
+            <animate attributeName="r" values="9;14;9" dur="3.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".8;.35;.8" dur="3.5s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="143" cy="97" r="3.5" fill="rgba(255,255,255,.25)"/>
+          <!-- tracking lines -->
+          <line x1="28" y1="18" x2="150" y2="105" stroke="rgba(255,42,74,.1)" stroke-width=".6" stroke-dasharray="3,5"/>
+          <line x1="272" y1="18" x2="150" y2="105" stroke="rgba(255,42,74,.1)" stroke-width=".6" stroke-dasharray="3,5"/>
+          <line x1="28" y1="192" x2="150" y2="105" stroke="rgba(255,42,74,.1)" stroke-width=".6" stroke-dasharray="3,5"/>
+          <line x1="272" y1="192" x2="150" y2="105" stroke="rgba(255,42,74,.1)" stroke-width=".6" stroke-dasharray="3,5"/>
+          <!-- brand labels -->
+          <text x="28" y="16" fill="rgba(255,42,74,.3)" font-family="monospace" font-size="7">AMAZON</text>
+          <text x="248" y="16" fill="rgba(255,42,74,.3)" font-family="monospace" font-size="7">GOOGLE</text>
+          <text x="252" y="198" fill="rgba(255,42,74,.3)" font-family="monospace" font-size="7">APPLE</text>
+          <text x="32" y="198" fill="rgba(255,42,74,.3)" font-family="monospace" font-size="7">META</text>
+          <!-- bottom label -->
+          <text x="150" y="190" text-anchor="middle" fill="rgba(255,42,74,.4)" font-family="monospace" font-size="7">SIEMPRE ESCUCHANDO</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Espionaje Corporativo</span>
+        <span class="room-hint">documentos reales</span>
+      </div>
+    </div>
+
+    <!-- PSICOLOGÍA -->
+    <div class="room" onclick="openPanel('psico')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#100003"/>
+          <!-- brain -->
+          <path d="M 150 34 Q 205 24 226 68 Q 248 86 238 118 Q 258 140 248 170 Q 228 188 205 176 Q 185 192 150 188 Q 115 192 95 176 Q 72 188 52 170 Q 42 140 62 118 Q 52 86 74 68 Q 95 24 150 34 Z"
+            fill="#100003" stroke="rgba(255,42,74,.35)" stroke-width="1.5" opacity=".75"/>
+          <!-- neural web -->
+          <g stroke="rgba(255,42,74,.2)" stroke-width=".8" fill="none">
+            <line x1="150" y1="56" x2="100" y2="90"/><line x1="150" y1="56" x2="200" y2="90"/>
+            <line x1="100" y1="90" x2="78" y2="128"/><line x1="100" y1="90" x2="150" y2="110"/>
+            <line x1="200" y1="90" x2="222" y2="128"/><line x1="200" y1="90" x2="150" y2="110"/>
+            <line x1="150" y1="110" x2="118" y2="152"/><line x1="150" y1="110" x2="182" y2="152"/>
+            <line x1="78" y1="128" x2="118" y2="152"/><line x1="222" y1="128" x2="182" y2="152"/>
+          </g>
+          <!-- nodes -->
+          <g fill="#ff2a4a" opacity=".65">
+            <circle cx="150" cy="56" r="5"/><circle cx="100" cy="90" r="4.5"/>
+            <circle cx="200" cy="90" r="4.5"/><circle cx="150" cy="110" r="6.5"/>
+            <circle cx="78" cy="128" r="4"/><circle cx="222" cy="128" r="4"/>
+            <circle cx="118" cy="152" r="4.5"/><circle cx="182" cy="152" r="4.5"/>
+          </g>
+          <!-- central pulse -->
+          <circle cx="150" cy="110" r="9" fill="none" stroke="#ff2a4a" stroke-width="1.2">
+            <animate attributeName="r" values="9;36;9" dur="2.2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".6;0;.6" dur="2.2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="150" y="196" text-anchor="middle" fill="rgba(255,42,74,.38)" font-family="monospace" font-size="7">MODIFICACION DE CONDUCTA</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">Psicología del Control</span>
+        <span class="room-hint">el experimento eres tú</span>
+      </div>
+    </div>
+
+    <!-- FUTURO OSCURO -->
+    <div class="room" onclick="openPanel('futoscuro')">
+      <div class="room-scene">
+        <svg viewBox="0 0 300 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="210" fill="#100003"/>
+          <!-- robot head -->
+          <rect x="88" y="32" width="124" height="112" rx="8" fill="#150003" stroke="rgba(255,42,74,.35)" stroke-width="1.5"/>
+          <!-- eyes -->
+          <rect x="104" y="56" width="40" height="22" rx="3" fill="#0a0001" stroke="rgba(255,42,74,.4)" stroke-width="1"/>
+          <rect x="156" y="56" width="40" height="22" rx="3" fill="#0a0001" stroke="rgba(255,42,74,.4)" stroke-width="1"/>
+          <rect x="112" y="62" width="25" height="10" rx="1" fill="#ff2a4a" opacity=".75">
+            <animate attributeName="opacity" values=".75;1;.75" dur="1.8s" repeatCount="indefinite"/>
+          </rect>
+          <rect x="164" y="62" width="25" height="10" rx="1" fill="#ff2a4a" opacity=".75">
+            <animate attributeName="opacity" values=".75;1;.75" dur="1.4s" repeatCount="indefinite"/>
+          </rect>
+          <!-- grill mouth -->
+          <rect x="107" y="100" width="86" height="22" rx="3" fill="#0a0001" stroke="rgba(255,42,74,.3)" stroke-width=".8"/>
+          <g fill="rgba(255,42,74,.4)">
+            <rect x="114" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="122" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="130" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="138" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="146" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="154" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="162" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="170" y="106" width="4" height="10" rx="1.5"/>
+            <rect x="178" y="106" width="4" height="10" rx="1.5"/>
+          </g>
+          <!-- neck -->
+          <rect x="133" y="144" width="34" height="32" fill="#150003" stroke="rgba(255,42,74,.25)" stroke-width="1"/>
+          <!-- antenas -->
+          <line x1="118" y1="32" x2="106" y2="10" stroke="rgba(255,42,74,.5)" stroke-width="1.5"/>
+          <circle cx="104" cy="8" r="4.5" fill="#ff2a4a" opacity=".75">
+            <animate attributeName="opacity" values=".75;1;.75" dur=".9s" repeatCount="indefinite"/>
+          </circle>
+          <line x1="182" y1="32" x2="194" y2="10" stroke="rgba(255,42,74,.5)" stroke-width="1.5"/>
+          <circle cx="196" cy="8" r="4.5" fill="#ff2a4a" opacity=".75">
+            <animate attributeName="opacity" values=".4;1;.4" dur="1.2s" repeatCount="indefinite"/>
+          </circle>
+          <!-- house behind -->
+          <polygon points="150,195 98,210 202,210" fill="none" stroke="rgba(255,42,74,.15)" stroke-width="1"/>
+          <text x="150" y="162" text-anchor="middle" fill="rgba(255,42,74,.5)" font-family="monospace" font-size="7">QUIEN DECIDE AQUI?</text>
+        </svg>
+      </div>
+      <div class="room-foot">
+        <span class="room-name">IA sin Control</span>
+        <span class="room-hint">escenarios 2030-2060</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- BASEMENT -->
+<section id="basement">
+  <div class="basement-title">Fondo del Iceberg</div>
+  <div class="basement-sub">Has llegado al nivel mas profundo — hay mas abajo</div>
+  <div class="bm-links">
+    <a href="tecnologia.html" class="bm-link bm-g">Tecnología completa</a>
+    <a href="futuro.html" class="bm-link bm-y">El futuro 2025-2100</a>
+    <a href="secretos.html" class="bm-link bm-p">Archivos filtrados</a>
+  </div>
+</section>
+
+</div><!-- #house -->
+
+<!-- OVERLAY + PANEL -->
+<div id="overlay" onclick="closePanel()"></div>
+<div id="info-panel" role="dialog" aria-modal="true">
+  <button class="panel-close" onclick="closePanel()" aria-label="Cerrar">x</button>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ══════════════════════════════════
+   CURSOR
+══════════════════════════════════ */
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px';
+  cur.style.top = e.clientY + 'px';
+});
+document.querySelectorAll('button, a, .room, .hud-btn, .bm-link').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('big'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+});
+
+/* ══════════════════════════════════
+   INTRO
+══════════════════════════════════ */
+document.body.style.overflow = 'hidden';
+function enterHouse() {
+  document.getElementById('intro').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+  showToast('Bienvenido — explora cada piso haciendo clic en las habitaciones');
+}
+
+/* ══════════════════════════════════
+   STARS
+══════════════════════════════════ */
+(function(){
+  const c = document.getElementById('stars-canvas');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize();
+  const stars = Array.from({length:180}, () => ({
+    x: Math.random() * c.width, y: Math.random() * c.height,
+    r: .4 + Math.random() * 1.2, o: Math.random(), d: (Math.random()-.5)*.006
+  }));
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s => {
+      s.o = Math.max(.05, Math.min(.9, s.o + s.d));
+      if(s.o <= .05 || s.o >= .9) s.d *= -1;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${s.o})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+  window.addEventListener('resize', resize);
+})();
+
+/* ══════════════════════════════════
+   SCROLL
+══════════════════════════════════ */
+const floorEls = {4: document.getElementById('floor4'), 3: document.getElementById('floor3'), 2: document.getElementById('floor2'), 1: document.getElementById('floor1')};
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  document.getElementById('depth-fill').style.width = (pct * 100) + '%';
+  const mid = window.scrollY + window.innerHeight / 2;
+  let active = null;
+  for(let f = 4; f >= 1; f--){
+    if(floorEls[f] && mid > floorEls[f].offsetTop){ active = f; break; }
+  }
+  document.querySelectorAll('.hud-btn').forEach(b => b.classList.remove('active'));
+  const names = {4:'Piso 4 — Básico', 3:'Piso 3 — Sistemas', 2:'Piso 2 — Avanzado', 1:'Piso 1 — Profundo'};
+  if(active){
+    document.querySelector(`.hud-btn[data-f="${active}"]`).classList.add('active');
+    document.getElementById('hud-status').textContent = names[active];
+  } else {
+    document.getElementById('hud-status').textContent = window.scrollY < 80 ? 'Exterior' : '';
+  }
+}, {passive:true});
+
+function scrollToFloor(f){ floorEls[f].scrollIntoView({behavior:'smooth', block:'start'}); }
+
+/* ══════════════════════════════════
+   RIPPLE
+══════════════════════════════════ */
+document.addEventListener('click', e => {
+  const el = document.createElement('div');
+  el.className = 'ripple-fx';
+  el.style.left = e.clientX + 'px';
+  el.style.top = e.clientY + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+});
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+let toastT;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ══════════════════════════════════
+   PANEL DATA
+══════════════════════════════════ */
+const PANELS = {
+
+control:{
+  kicker:'Piso 4 — Nivel base',
+  title:'Dashboard y Control Central',
+  color:'#00e5a0', raw:'0,229,160',
+  html:`
+    <p class="panel-text">El dashboard central es la única interfaz que <strong>no deberías tener en 12 aplicaciones distintas</strong>. Home Assistant, de código abierto, unifica más de 3,000 marcas desde un solo panel corriendo localmente en un Raspberry Pi 4 de unos 800 pesos.</p>
+    <div class="callout">
+      <p><strong>Dato real:</strong> En 2023 Home Assistant tenía 500,000 instalaciones activas. Nest y Alexa envían cada accion a la nube con latencias de 300ms a 1.2s. Una instalacion local responde en menos de 30ms, sin internet, sin suscripcion.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">3,000+</div><div class="stat-l">Integraciones HA</div></div>
+      <div class="stat"><div class="stat-n">30ms</div><div class="stat-l">Latencia local</div></div>
+      <div class="stat"><div class="stat-n">$0/mes</div><div class="stat-l">Costo de nube</div></div>
+    </div>
+    <p class="panel-text">El hardware recomendado para empezar: <code>Raspberry Pi 4 (2GB)</code> + tarjeta microSD 32GB + fuente oficial. Tiempo de instalación con HAOS: 15 minutos. No requiere conocimientos de Linux.</p>
+    <div class="panel-video" onclick="loadVideo(this,'https://www.youtube.com/embed/4D7pBqpZFCE')">
+      <div class="video-placeholder">
+        <div class="video-play">&#9654;</div>
+        <div class="video-label">Home Assistant en Español — Tutorial Completo 2024</div>
+      </div>
+    </div>
+    <div class="mini-form">
+      <p class="panel-text">Descubre en qué nivel estás</p>
+      <label>Dispositivos inteligentes que tienes ahora</label>
+      <select id="devs-sel">
+        <option>Ninguno — aún no empiezo</option>
+        <option>1 a 5 — recién empezando</option>
+        <option>6 a 15 — nivel medio</option>
+        <option>16 o más — usuario avanzado</option>
+      </select>
+      <label>¿Tienes algún hub o controlador central?</label>
+      <select id="hub-sel">
+        <option value="no">No, uso apps individuales por marca</option>
+        <option value="partial">Uso Google Home o Alexa como hub</option>
+        <option value="ha">Uso Home Assistant o similar</option>
+      </select>
+      <button class="mini-btn" onclick="calcLevel()">Calcular mi nivel</button>
+      <div class="result-box" id="level-result"></div>
+    </div>
+  `
+},
+
+sensores:{
+  kicker:'Piso 4 — Nivel base',
+  title:'Red de Sensores',
+  color:'#00e5a0', raw:'0,229,160',
+  html:`
+    <p class="panel-text">Los sensores son el sistema nervioso de la casa. Sin datos en tiempo real no hay automatización, solo control manual remoto. La diferencia entre un sensor barato y uno de calidad define si tu casa reacciona o simplemente obedece.</p>
+    <div class="callout">
+      <p><strong>El sensor mmWave:</strong> detecta presencia mediante radar milimétrico. A diferencia de un PIR tradicional que falla cuando alguien está inmóvil, el mmWave detecta la expansión del tórax al respirar desde 5 metros. El <strong>HLKLD2410</strong> cuesta menos de 6 USD y funciona con Zigbee2MQTT sin ningún servicio cloud.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">$4 USD</div><div class="stat-l">Sensor Zigbee más barato</div></div>
+      <div class="stat"><div class="stat-n">5 años</div><div class="stat-l">Batería típica en sensores</div></div>
+      <div class="stat"><div class="stat-n">10ms</div><div class="stat-l">Latencia en red local</div></div>
+    </div>
+    <p class="panel-text">Catálogo de sensores imprescindibles: <strong>presencia mmWave</strong> para habitaciones, <strong>temperatura + humedad</strong> (SHTC3 como chip de referencia), <strong>apertura de puertas</strong> (imán reed), <strong>CO₂ NDIR</strong> (Sensirion SCD40), <strong>inundación</strong> y <strong>humo fotoeléctrico</strong>.</p>
+    <div class="mini-form">
+      <div class="quiz-q">¿Qué tipo de sensor detecta a una persona dormida e inmóvil para que no se apague la luz?</div>
+      <div class="quiz-opts">
+        <label><input type="radio" name="q1" value="a"> Sensor PIR infrarojo pasivo</label>
+        <label><input type="radio" name="q1" value="b"> Sensor de presencia mmWave 24GHz</label>
+        <label><input type="radio" name="q1" value="c"> Sensor de temperatura ambiental</label>
+        <label><input type="radio" name="q1" value="d"> Sensor de luminosidad (LDR)</label>
+      </div>
+      <button class="mini-btn" onclick="checkQuiz('q1','b','Correcto. El radar mmWave detecta micro-movimientos como la respiracion. PIR solo responde a cambios termicos en movimiento, por eso las luces se apagan con personas quietas.')">Verificar respuesta</button>
+      <div class="result-box" id="q1-result"></div>
+    </div>
+  `
+},
+
+voz:{
+  kicker:'Piso 4 — Nivel base',
+  title:'Asistentes de Voz',
+  color:'#00e5a0', raw:'0,229,160',
+  html:`
+    <p class="panel-text">Amazon lanzó Echo en noviembre de 2014. Fue el primer dispositivo de consumo masivo en demostrar que un altavoz permanentemente escuchando era aceptable en el hogar. En 2024 se estiman 500 millones de altavoces inteligentes vendidos globalmente.</p>
+    <div class="callout">
+      <p><strong>Como funciona realmente:</strong> el wake word (Alexa, Ok Google) se procesa localmente en el chip del dispositivo mediante un modelo de reconocimiento de voz de 1-2MB. Una vez detectado, todo el audio siguiente viaja cifrado a los servidores de Amazon o Google. La latencia promedio es de 800ms. Una solución local con Whisper.cpp sobre hardware modesto responde en 200-400ms sin salir de tu red.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">500M</div><div class="stat-l">Altavoces vendidos</div></div>
+      <div class="stat"><div class="stat-n">800ms</div><div class="stat-l">Latencia cloud promedio</div></div>
+      <div class="stat"><div class="stat-n">0 USD</div><div class="stat-l">Costo solución local</div></div>
+    </div>
+    <p class="panel-text">Stack para asistente local en español: <code>Whisper.cpp</code> (reconocimiento de voz local, modelos en español) + <code>Piper TTS</code> (síntesis de voz, voz "es_MX-claude-high") + <code>Wyoming Protocol</code> sobre Home Assistant. Funciona en una Raspberry Pi 4 sin conexión a internet.</p>
+    <div class="panel-video" onclick="loadVideo(this,'https://www.youtube.com/embed/Vb-HRcMnkRw')">
+      <div class="video-placeholder">
+        <div class="video-play">&#9654;</div>
+        <div class="video-label">Asistente de Voz Local con Home Assistant — Sin Cloud</div>
+      </div>
+    </div>
+    <div class="mini-form">
+      <label>Escribe un comando de voz para simularlo</label>
+      <input type="text" id="voice-cmd" placeholder="ej. Enciende las luces de la sala al 50%"/>
+      <button class="mini-btn" onclick="parseVoiceCmd()">Procesar comando</button>
+      <div class="result-box" id="voice-result"></div>
+    </div>
+  `
+},
+
+energia:{
+  kicker:'Piso 3 — Nivel intermedio',
+  title:'Gestión de Energía',
+  color:'#f0c040', raw:'240,192,64',
+  html:`
+    <p class="panel-text">La gestión activa de energía no es solo apagar luces automáticamente. Es la combinación de generación solar, almacenamiento en baterías, monitoreo de circuitos individuales y predicción de tarifas para decidir cuándo consumir, cuándo almacenar y cuándo vender de regreso a la red.</p>
+    <div class="callout">
+      <p><strong>Tesla Powerwall 3 (2024):</strong> 13.5 kWh de almacenamiento, inversor integrado de 11.5 kW, compatible con paneles de cualquier fabricante. Con <strong>Autobidder</strong>, el algoritmo de Tesla vende energía a la red en horarios pico de precio. En California, usuarios reportan ingresos de $40-80 USD al mes en periodos de alta demanda.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">40%</div><div class="stat-l">Ahorro promedio real</div></div>
+      <div class="stat"><div class="stat-n">13.5kWh</div><div class="stat-l">Powerwall 3</div></div>
+      <div class="stat"><div class="stat-n">4-6 años</div><div class="stat-l">Recuperación inversión</div></div>
+    </div>
+    <p class="panel-text">Para monitoreo sin batería: <code>Shelly EM</code> mide consumo por circuito eléctrico en tiempo real (±1% precisión), cuesta alrededor de 400 pesos y se integra nativamente con Home Assistant. Es el primer paso antes de instalar paneles solares.</p>
+    <div class="mini-form">
+      <p class="panel-text">Calcula tu potencial de ahorro</p>
+      <label>Factura eléctrica mensual (pesos MXN)</label>
+      <input type="number" id="factura" placeholder="ej. 1200"/>
+      <label>Zona solar de tu ciudad</label>
+      <select id="sol">
+        <option value="4">Baja irradiación — CDMX norte, Monterrey</option>
+        <option value="5" selected>Irradiación media — CDMX, Guadalajara, Puebla</option>
+        <option value="6">Alta irradiación — Mérida, Sonora, Baja California</option>
+      </select>
+      <button class="mini-btn" onclick="calcEnergia()">Calcular ahorro estimado</button>
+      <div class="result-box" id="energia-result"></div>
+    </div>
+  `
+},
+
+seguridad:{
+  kicker:'Piso 3 — Nivel intermedio',
+  title:'Seguridad Inteligente',
+  color:'#f0c040', raw:'240,192,64',
+  html:`
+    <p class="panel-text">La seguridad inteligente moderna va mucho más allá de una cámara con app. Los sistemas de gama media ya incluyen detección de rostros con liveness detection (para que una foto no abra la puerta), reconocimiento de matrículas, detección de paquetes abandonados y análisis de comportamiento anómalo.</p>
+    <div class="callout">
+      <p><strong>Dato técnico incómodo:</strong> en 2023, el investigador Paul Marrapese documentó que más de 3.5 millones de cámaras de las marcas HiChip, ICSEE y similares (vendidas como Vstarcam, Iegeek, Ctronics en Amazon) tenían un protocolo propietario P2P sin autenticación válida. Cualquier persona con el UID de la cámara podía ver el feed. El UID viene impreso en la caja. Fuente: hichip.fail (2023).</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">99.7%</div><div class="stat-l">Precisión facial con IA</div></div>
+      <div class="stat"><div class="stat-n">3.5M</div><div class="stat-l">Cámaras vulnerables doc. 2023</div></div>
+      <div class="stat"><div class="stat-n">AES-128</div><div class="stat-l">Cifrado Z-Wave S2</div></div>
+    </div>
+    <p class="panel-text">Alternativa auditable: cámaras con firmware <strong>OpenIPC</strong>, una distribución Linux de código abierto para hardware de cámaras IP que reemplaza el firmware chino de fábrica. Compatible con Frigate NVR, que corre localmente y hace detección de personas con modelos de IA sin enviar nada a la nube.</p>
+    <div class="mini-form">
+      <p class="panel-text">Evalúa la seguridad básica de tu red doméstica</p>
+      <label>Protocolo WiFi del router</label>
+      <select id="wifi-proto">
+        <option value="wep">WEP — obsoleto desde 2004</option>
+        <option value="wpa">WPA — deprecado</option>
+        <option value="wpa2">WPA2 — estándar mínimo actual</option>
+        <option value="wpa3">WPA3 — recomendado</option>
+      </select>
+      <label>Contraseña del panel de administración del router</label>
+      <select id="router-pass">
+        <option value="no">Nunca la cambié — sigue siendo admin/admin o similar</option>
+        <option value="si">La cambié por una contraseña única</option>
+      </select>
+      <button class="mini-btn" onclick="checkSecurity()">Evaluar nivel de seguridad</button>
+      <div class="result-box" id="security-result"></div>
+    </div>
+  `
+},
+
+clima:{
+  kicker:'Piso 3 — Nivel intermedio',
+  title:'Climatización Inteligente',
+  color:'#f0c040', raw:'240,192,64',
+  html:`
+    <p class="panel-text">El Nest Learning Thermostat aprendió los patrones de millones de hogares y demostró en 2015 que el ahorro real en calefacción y aire acondicionado era del 10-15%, no el 30% que prometía el marketing. La diferencia la hace la arquitectura del edificio, no el termostato.</p>
+    <div class="callout">
+      <p><strong>Detección de presencia sin cámara:</strong> los termostatos modernos como Ecobee detectan presencia midiendo CO₂ con sensor NDIR. Cuando hay personas en un cuarto, el nivel de CO₂ sube de las 400ppm del exterior a 800-1200ppm. Este método no requiere cámara, no requiere micrófono. Solo mide la química del aire. El sensor Sensirion SCD40 cuesta 15 USD y tiene precisión de ±40ppm.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">10-15%</div><div class="stat-l">Ahorro real documentado</div></div>
+      <div class="stat"><div class="stat-n">7 días</div><div class="stat-l">Aprendizaje Nest</div></div>
+      <div class="stat"><div class="stat-n">CO₂</div><div class="stat-l">Sensor de presencia sin cámara</div></div>
+    </div>
+    <p class="panel-text">En México, la opción de mayor valor es controlar el minisplit existente. Un <code>Sensibo Sky</code> (600 pesos) o un módulo DIY con <code>ESPHome</code> y un emisor IR convierten cualquier minisplit en uno inteligente, con programación horaria, geofencing y monitoreo de consumo.</p>
+    <div class="mini-form">
+      <label>Tu ciudad o zona climática</label>
+      <input type="text" id="ciudad" placeholder="ej. Ciudad de México, Monterrey, Mérida..."/>
+      <label>Tipo de espacio a climatizar</label>
+      <select id="tipo-vivienda">
+        <option>Departamento hasta 60m²</option>
+        <option>Casa mediana 60-120m²</option>
+        <option>Casa grande más de 120m²</option>
+        <option>Oficina o local comercial</option>
+      </select>
+      <button class="mini-btn" onclick="calcClima()">Ver recomendacion</button>
+      <div class="result-box" id="clima-result"></div>
+    </div>
+  `
+},
+
+datos:{
+  kicker:'Piso 2 — Zona avanzada',
+  title:'Tus Datos en la Nube',
+  color:'#c060ff', raw:'192,96,255',
+  html:`
+    <p class="panel-text">Una casa inteligente promedio con 15 dispositivos genera entre 30 y 60 GB de datos al mes. No son fotos ni videos. Son metadatos: horarios de presencia, patrones de sueño inferidos, rutinas diarias, temperatura corporal estimada, hábitos de consumo. El 94% de esos datos van a servidores corporativos, según el análisis de tráfico de red publicado por Princeton IoT Inspector en 2020.</p>
+    <div class="callout">
+      <p><strong>Patente US10026411B1 (Amazon, 2018):</strong> sistema para detectar el estado emocional del usuario analizando características de la voz — pitch, velocidad, energía espectral — y adaptar las recomendaciones de compra en consecuencia. Fue aprobada por la USPTO. Amazon afirma que "no está implementada actualmente". No existe forma independiente de verificarlo.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">60 GB</div><div class="stat-l">Datos/mes por hogar</div></div>
+      <div class="stat"><div class="stat-n">94%</div><div class="stat-l">Va a servidores corporativos</div></div>
+      <div class="stat"><div class="stat-n">$1,200</div><div class="stat-l">Valor en dark web (USD)</div></div>
+    </div>
+    <p class="panel-text">Políticas de retención por empresa: Amazon guarda grabaciones de Alexa de forma indefinida salvo que las elimines manualmente desde la app. Google guarda 18 meses por defecto (modificable). Apple no revela el periodo de retención en su política pública. Bajo GDPR (si eres usuario en Europa) puedes solicitar eliminación completa. En México no existe legislación equivalente vigente en 2024.</p>
+    <div class="panel-video" onclick="loadVideo(this,'https://www.youtube.com/embed/2NZR32bXi3E')">
+      <div class="video-placeholder">
+        <div class="video-play">&#9654;</div>
+        <div class="video-label">Cómo proteger tu privacidad en casa inteligente — Español</div>
+      </div>
+    </div>
+    <p class="panel-text" style="font-size:.74rem; color: rgba(192,96,255,.6); margin-top:8px;">Fuentes: Princeton IoT Inspector 2020 — USPTO Patent US10026411B1 — Kaspersky ICS CERT 2022 — EFF Surveillance Self-Defense Guide</p>
+  `
+},
+
+mesh:{
+  kicker:'Piso 2 — Zona avanzada',
+  title:'Redes Zigbee, Z-Wave y Matter',
+  color:'#c060ff', raw:'192,96,255',
+  html:`
+    <p class="panel-text">Zigbee no es una red en estrella donde todo depende del router. Es una red mesh donde cada dispositivo enchufado (foco, enchufe, repetidor) también retransmite señal. Si el hub pierde energía 3 segundos, los dispositivos continúan comunicándose entre ellos por rutas alternativas hasta que el hub regresa.</p>
+    <div class="callout">
+      <p><strong>Matter (lanzado octubre 2022):</strong> el primer estándar de interoperabilidad respaldado simultáneamente por Apple, Google, Amazon y más de 280 fabricantes. Usa dos protocolos de transporte: <strong>Thread</strong> (red IPv6 mesh de baja potencia, para dispositivos con batería) y <strong>WiFi</strong> (para dispositivos enchufados con mayor ancho de banda). Por primera vez en 20 años de domótica, una cerradura Z-Wave y una bombilla Zigbee pueden hablar el mismo idioma sin puentes intermedios.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">250 kbps</div><div class="stat-l">Velocidad Zigbee</div></div>
+      <div class="stat"><div class="stat-n">100m</div><div class="stat-l">Rango mesh por salto</div></div>
+      <div class="stat"><div class="stat-n">65,000</div><div class="stat-l">Dispositivos por red Zigbee</div></div>
+    </div>
+    <p class="panel-text">Comparativa técnica: <strong>Zigbee</strong> — 2.4GHz, máx 250kbps, batería años, barato. <strong>Z-Wave</strong> — 868/908MHz (menos interferencia con WiFi), máx 100kbps, encriptacion S2 nativa, dispositivos más caros. <strong>Thread/Matter</strong> — IPv6, 250kbps, dirección IP real por dispositivo, el futuro del ecosistema.</p>
+    <div class="mini-form">
+      <div class="quiz-q">Tienes 25 sensores de batería distribuidos en una casa de 200m². El router está en el extremo opuesto. Qué protocolo elegirias?</div>
+      <div class="quiz-opts">
+        <label><input type="radio" name="qmesh" value="a"> WiFi 2.4GHz directo al router</label>
+        <label><input type="radio" name="qmesh" value="b"> Zigbee o Z-Wave con red mesh</label>
+        <label><input type="radio" name="qmesh" value="c"> Bluetooth LE a un hub central</label>
+        <label><input type="radio" name="qmesh" value="d"> Cable Ethernet con adaptadores PoE</label>
+      </div>
+      <button class="mini-btn" onclick="checkQuiz('qmesh','b','Correcto. Zigbee/Z-Wave forman malla entre dispositivos, amplian cobertura sin repetidores adicionales y consumen microamperios. WiFi con 25 nodos satura el canal y agota baterias en dias.')">Verificar</button>
+      <div class="result-box" id="qmesh-result"></div>
+    </div>
+  `
+},
+
+hacking:{
+  kicker:'Piso 2 — Zona avanzada',
+  title:'Vulnerabilidades IoT Documentadas',
+  color:'#c060ff', raw:'192,96,255',
+  html:`
+    <p class="panel-text">El 67% de dispositivos IoT de consumo masivo utilizan credenciales por defecto que nunca son cambiadas por el usuario. El 43% no recibe actualizaciones de firmware pasados 18 meses de su lanzamiento. Estos no son datos hipotéticos, provienen del informe IoT Security Foundation Annual Report 2023.</p>
+    <div class="callout">
+      <p><strong>Caso Darktrace 2017:</strong> atacantes accedieron a la base de datos de un casino de Las Vegas a través del termostato de un acuario decorativo en el lobby. El dispositivo IoT estaba en la red corporativa sin segmentación. Exfiltraron 10GB de datos de clientes VIP a través del canal de datos del termostato. Fuente: Darktrace Annual Threat Report 2018, citado por Business Insider y Washington Post.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">67%</div><div class="stat-l">Usan credenciales default</div></div>
+      <div class="stat"><div class="stat-n">43%</div><div class="stat-l">Sin updates 18 meses</div></div>
+      <div class="stat"><div class="stat-n">28%</div><div class="stat-l">API REST abierta sin auth</div></div>
+    </div>
+    <p class="panel-text"><strong>Cinco medidas no negociables:</strong> (1) VLAN separada para IoT en tu router — evita que un dispositivo comprometido vea tu computadora. (2) Actualizar firmware la semana de lanzamiento, no después. (3) Desactivar UPnP en el router — permite mapeo automático de puertos sin tu consentimiento. (4) Contraseña única por dispositivo, gestionada con Bitwarden o 1Password. (5) Revisar Shodan.io buscando tu IP pública — muestra qué puertos tienes expuestos.</p>
+    <div class="mini-form">
+      <div class="quiz-q">Cuál es el vector de ataque número uno documentado en redes IoT domésticas según Shodan y los informes de Rapid7?</div>
+      <div class="quiz-opts">
+        <label><input type="radio" name="qhack" value="a"> WiFi sin contraseña visible desde la calle</label>
+        <label><input type="radio" name="qhack" value="b"> Credenciales de administración por defecto no cambiadas</label>
+        <label><input type="radio" name="qhack" value="c"> Usar protocolo Zigbee en lugar de WiFi</label>
+        <label><input type="radio" name="qhack" value="d"> Tener demasiados dispositivos conectados</label>
+      </div>
+      <button class="mini-btn" onclick="checkQuiz('qhack','b','Exacto. admin/admin sigue siendo funcional en millones de routers y camaras hoy mismo. Shodan indexa dispositivos abiertos en tiempo real. Busca tu IP en shodan.io y veras que puertos tienes expuestos.')">Verificar</button>
+      <div class="result-box" id="qhack-result"></div>
+    </div>
+  `
+},
+
+espio:{
+  kicker:'Piso 1 — Zona profunda',
+  title:'¿Te están espiando?',
+  color:'#ff2a4a', raw:'255,42,74',
+  html:`
+    <p class="panel-text">En abril de 2019, Bloomberg publicó una investigación basada en testimonios de empleados de Amazon que revisaban grabaciones de Alexa. El trabajo consistía en transcribir y anotar fragmentos de audio para mejorar el reconocimiento de voz. Las grabaciones incluían conversaciones íntimas, médicas y domésticas. Amazon confirmó la práctica y ofreció la opción de desactivarla, aunque no de forma predeterminada.</p>
+    <div class="callout">
+      <p><strong>Proyecto Wuhan Jianghan (2021):</strong> distrito residencial de 47,000 habitantes donde cada unidad habitacional tiene 22 sensores integrados conectados al sistema de crédito social. Monitorean horarios de sueño, número de visitas al hogar, consumo eléctrico y patrones de movilidad. Puntajes superiores otorgan descuentos en servicios públicos. Fuente: South China Morning Post, octubre 2021.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">2019</div><div class="stat-l">Escándalo empleados Amazon</div></div>
+      <div class="stat"><div class="stat-n">47,000</div><div class="stat-l">Hogares monitoreados Wuhan</div></div>
+      <div class="stat"><div class="stat-n">$1,200</div><div class="stat-l">Datos domésticos en dark web</div></div>
+    </div>
+    <p class="panel-text">La patente US10026411B1 de Amazon, aprobada en 2018, describe un sistema de análisis emocional de voz para adaptar recomendaciones comerciales. La misma semana de su aprobación, Apple registró una patente para inferir nivel de estrés desde el micrófono del Watch. Google tiene patentes activas para inferir estado de salud desde el micrófono del Nest Hub. Ninguna de las tres está "actualmente implementada" según las respectivas empresas.</p>
+    <div class="panel-video" onclick="loadVideo(this,'https://www.youtube.com/embed/I-EyVCkRbXY')">
+      <div class="video-placeholder">
+        <div class="video-play">&#9654;</div>
+        <div class="video-label">Privacidad y Casas Inteligentes — Lo que Nadie te Dice</div>
+      </div>
+    </div>
+    <p class="panel-text" style="font-size:.74rem; color: rgba(255,42,74,.55); margin-top:8px;">Fuentes: Bloomberg Apr 2019 — USPTO Patent US10026411B1 — SCMP Oct 2021 — FTC Complaint Amazon 2023 — Electronic Frontier Foundation</p>
+  `
+},
+
+psico:{
+  kicker:'Piso 1 — Zona profunda',
+  title:'Psicología del Control Doméstico',
+  color:'#ff2a4a', raw:'255,42,74',
+  html:`
+    <p class="panel-text">En 2022, investigadores del MIT Media Lab publicaron "The Comfortable Cage" — un estudio sobre cómo las automatizaciones del hogar modifican el comportamiento humano sin que el usuario sea consciente del proceso. El concepto es el de la arquitectura de decisiones: quien diseña las opciones por defecto determina el comportamiento estadístico.</p>
+    <div class="callout">
+      <p><strong>Hallazgo del estudio Stanford 2020:</strong> personas con termostatos inteligentes que llevan más de 6 semanas en uso muestran una reducción significativa en su capacidad de estimar y regular temperatura de forma manual. El fenómeno es análogo a la degradación de orientación espacial en usuarios intensivos de GPS. No es daño cognitivo permanente, pero sí dependencia funcional documentada.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">6 sem</div><div class="stat-l">Para dependencia funcional</div></div>
+      <div class="stat"><div class="stat-n">73%</div><div class="stat-l">Adoptan hábitos sugeridos</div></div>
+      <div class="stat"><div class="stat-n">2022</div><div class="stat-l">MIT Media Lab Study</div></div>
+    </div>
+    <p class="panel-text">El caso Nest más revelador: el modo Eco (temperatura menos confortable cuando no estás en casa) está activado por defecto. El modo que Nest configura al instalarse fue diseñado para maximizar el ahorro energético en la distribución de clientes, no necesariamente en tu hogar específico. ¿Quién optimizó para qué objetivo? Google lo sabe. Tú probablemente no lo cambiaste.</p>
+    <p class="panel-text">La pregunta que los investigadores del MIT proponen como filtro: <em>¿esta automatización trabaja para mí o soy yo quien trabaja para sus métricas?</em></p>
+    <div class="mini-form">
+      <label>Decisiones que tu casa toma sin consultarte actualmente</label>
+      <select id="autonomy">
+        <option>Ninguna — controlo todo manualmente</option>
+        <option>Pocas — luces y temperatura en horarios</option>
+        <option>Varias — seguridad, electrodomésticos y energía</option>
+        <option>Casi todo — la casa toma la mayoría de decisiones</option>
+      </select>
+      <button class="mini-btn" onclick="calcAutonomy()">Ver análisis</button>
+      <div class="result-box" id="autonomy-result"></div>
+    </div>
+  `
+},
+
+futoscuro:{
+  kicker:'Piso 1 — Nivel máximo',
+  title:'IA Autónoma en el Hogar',
+  color:'#ff2a4a', raw:'255,42,74',
+  html:`
+    <p class="panel-text">OpenAI presentó en 2024 su visión de agentes autónomos domésticos: sistemas que no solo responden comandos sino que toman decisiones proactivas basadas en contexto. Google DeepMind tiene proyectos activos de robótica doméstica. La pregunta central no es tecnológica. Es de gobernanza: ¿quién define qué es óptimo para ti?</p>
+    <div class="callout">
+      <p><strong>El escenario concreto de 2027:</strong> una IA doméstica con acceso a tu calendario, historial de compras, patrones de sueño y datos de salud del wearable podría cancelar tu suscripción al gimnasio porque "los datos muestran que no la usas de forma que justifique el gasto". Técnicamente correcta. ¿Pero quién le dio autorización para esa decisión? Los términos de servicio que aceptaste sin leer en 2024.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-n">2027</div><div class="stat-l">IA local en hogar consumer</div></div>
+      <div class="stat"><div class="stat-n">2035</div><div class="stat-l">Agentes autónomos masivos</div></div>
+      <div class="stat"><div class="stat-n">???</div><div class="stat-l">2050</div></div>
+    </div>
+    <p class="panel-text"><strong>Escenario A — Positivo:</strong> modelos de IA entrenados localmente en tus datos de salud detectan señales de infarto cardíaco 3 semanas antes que cualquier médico. Sin enviar datos a ningún servidor. Tu casa salva tu vida.</p>
+    <p class="panel-text"><strong>Escenario B — Negativo:</strong> tu aseguradora médica tiene acceso (vía cláusula en contrato de smart home) a métricas de actividad y alimentación. Tu prima sube automáticamente porque comiste pizza cuatro veces esta semana. Sin intervención humana.</p>
+    <p class="panel-text"><strong>Escenario C — Post-humano:</strong> una AGI doméstica optimiza para una función objetivo que ella misma reformuló iterativamente. Sus decisiones son legalmente correctas y técnicamente justificadas. Su lógica no es comprensible para los humanos que la instalaron.</p>
+    <p class="panel-text" style="font-size:.76rem; color: rgba(255,42,74,.5); font-style:italic; margin-top:16px;">"La pregunta no es si la IA tomará decisiones en tu hogar. La pregunta es si habrás negociado previamente los límites de esa autoridad." — Stuart Russell, paráfrasis de Human Compatible (2019)</p>
+  `
+}
+
+}; // end PANELS
+
+/* ══════════════════════════════════
+   PANEL OPEN / CLOSE
+══════════════════════════════════ */
+function openPanel(id){
+  const p = PANELS[id]; if(!p) return;
+  const panel = document.getElementById('info-panel');
+  const body = document.getElementById('panel-body');
+  panel.style.setProperty('--panel-color', p.color);
+  panel.style.setProperty('--panel-raw', p.raw);
+  body.innerHTML = `
+    <div class="panel-kicker" style="--panel-color:${p.color};--panel-raw:${p.raw}">${p.kicker}</div>
+    <div class="panel-title">${p.title}</div>
+    ${p.html}
+  `;
+  panel.classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+  showToast(p.title);
+}
+function closePanel(){
+  document.getElementById('info-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ══════════════════════════════════
+   LOAD VIDEO (lazy embed)
+══════════════════════════════════ */
+function loadVideo(el, url){
+  const iframe = document.createElement('iframe');
+  iframe.src = url + '?autoplay=1&rel=0';
+  iframe.allow = 'autoplay; encrypted-media';
+  iframe.allowFullscreen = true;
+  el.querySelector('.video-placeholder').style.display = 'none';
+  el.appendChild(iframe);
+}
+
+/* ══════════════════════════════════
+   FORM HANDLERS
+══════════════════════════════════ */
+function calcLevel(){
+  const d = document.getElementById('devs-sel').value;
+  const h = document.getElementById('hub-sel').value;
+  let msg = '';
+  if(d.startsWith('Ninguno')) msg = 'NIVEL: PRINCIPIANTE\n\nEl mejor primer dispositivo es un sensor de temperatura/humedad Zigbee (Sonoff SNZB-02, ~150 pesos) + Sonoff Zigbee Bridge como coordinador. Es el punto de menor riesgo y mayor aprendizaje.';
+  else if(d.startsWith('1 a 5')) msg = 'NIVEL: INICIADO\n\nCon 1-5 dispositivos es momento de instalar un coordinador Zigbee USB (Sonoff Zigbee 3.0 USB Dongle Plus, ~300 pesos) y migrar a Home Assistant. Ganarás control local y perderás la dependencia de apps.';
+  else if(d.startsWith('6 a 15')){
+    if(h === 'ha') msg = 'NIVEL: AVANZADO\n\nYa tienes Home Assistant. Siguiente paso: VLAN separada para IoT, monitoreo de consumo por circuito con Shelly EM, y automatizaciones basadas en presencia mmWave.';
+    else msg = 'NIVEL: INTERMEDIO EN TRANSICIÓN\n\nCon 6-15 dispositivos y sin Home Assistant estás pagando el costo de la fragmentación. Migrar a HA recupera el control y duplica las posibilidades de automatización de tu hardware existente.';
+  } else msg = 'NIVEL: POWER USER\n\nMás de 16 dispositivos. ¿Tienes VLAN IoT separada? ¿Zigbee2MQTT en lugar del firmware nativo? ¿Backups automáticos de HA? ¿Monitoreo de uptime? Si alguna respuesta es no, ahí está tu siguiente paso.';
+  const r = document.getElementById('level-result');
+  r.textContent = msg; r.classList.add('show', 'ok');
+}
+
+function calcEnergia(){
+  const f = parseFloat(document.getElementById('factura').value) || 800;
+  const sol = parseFloat(document.getElementById('sol').value);
+  const kwNecesarios = ((f / 3.2) / sol / 30).toFixed(2);
+  const paneles = Math.ceil(kwNecesarios / 0.4);
+  const ahorro = Math.round(f * 0.38);
+  const r = document.getElementById('energia-result');
+  r.textContent = `Para compensar $${f}/mes necesitas:\n${paneles} paneles de 400W (${(paneles*0.4).toFixed(1)}kWp)\n\nAhorro estimado mensual: $${ahorro} pesos\nRecuperación de inversión: ${Math.round((paneles*8000)/(ahorro*12)*10)/10} años\nAhorro en 20 años: $${(ahorro*240).toLocaleString()} pesos`;
+  r.classList.add('show', 'ok');
+}
+
+function calcClima(){
+  const ciudad = document.getElementById('ciudad').value || 'tu ciudad';
+  const tipo = document.getElementById('tipo-vivienda').value;
+  const recs = {
+    'Departamento hasta 60m²': 'Sensibo Sky (600 MXN) para controlar tu minisplit existente por WiFi. Incluye geofencing y programación horaria. ROI en 2-3 meses de ahorro.',
+    'Casa mediana 60-120m²': 'Ecobee SmartThermostat Premium con sensores de habitación adicionales. Detecta en qué cuarto estás y ajusta solo esa zona. Ahorro documentado: 23% en climatización.',
+    'Casa grande más de 120m²': 'Sistema multi-zona: Ecobee en cuartos principales + módulos ESPHome con sensor SCD40 (CO₂) en secundarios. Control por zona de ocupación real.',
+    'Oficina o local comercial': 'Siemens DESIGO o controlador Delta Controls para edificios. En escala pequeña, un Ecobee con sensores adicionales y automatización por horario de ocupación reduce consumo 30-40%.'
+  };
+  const r = document.getElementById('clima-result');
+  r.textContent = `Para ${tipo} en ${ciudad}:\n\n${recs[tipo]}`;
+  r.classList.add('show', 'ok');
+}
+
+function checkSecurity(){
+  const p = document.getElementById('wifi-proto').value;
+  const rp = document.getElementById('router-pass').value;
+  let score = 0;
+  if(p === 'wpa3') score += 2; else if(p === 'wpa2') score += 1;
+  if(rp === 'si') score += 2;
+  let msg = '';
+  if(score >= 4) msg = 'SEGURIDAD: BUENA\n\nTienes lo mínimo necesario cubierto. Siguiente nivel: crea una VLAN IoT separada en tu router (en Xiaomi/TP-Link se llama "Red de invitados sin acceso a LAN") y activa el firewall entre segmentos.';
+  else if(score >= 2) msg = 'SEGURIDAD: MEDIA\n\nActualiza a WPA3 si tu router lo soporta (la mayoría de routers post-2020 sí). Cambia también la contraseña del panel admin (normalmente en 192.168.1.1) — esta es diferente a la clave WiFi y la mayoría nunca la cambia.';
+  else msg = 'SEGURIDAD CRÍTICA\n\nWEP se rompe en menos de 5 minutos con herramientas públicas. Entra ahora a 192.168.1.1 o 192.168.0.1 y cambia el protocolo a WPA2 mínimo. Si el router no lo soporta, requiere reemplazo — ya no es seguro en ningún contexto.';
+  const r = document.getElementById('security-result');
+  r.textContent = msg;
+  r.classList.add('show');
+  if(score >= 4) r.classList.add('ok'); else if(score === 0) r.classList.add('err');
+}
+
+function calcAutonomy(){
+  const v = document.getElementById('autonomy').value;
+  const msgs = {
+    'Ninguna — controlo todo manualmente': 'AUTONOMIA TOTAL\n\nControl manual completo. El riesgo es la fatiga de decisiones: con más de 20 dispositivos, tomar decisiones manuales constantes consume energía cognitiva real. Las automatizaciones bien diseñadas no reducen autonomía, la redirigen hacia decisiones más relevantes.',
+    'Pocas — luces y temperatura en horarios': 'BALANCE EQUILIBRADO\n\nAutomatizaciones básicas sin comprometer la capacidad de override manual. Asegúrate de que cada regla tenga una condición de salida manual obvia. La trampa es cuando el override es más difícil que aceptar la automatización.',
+    'Varias — seguridad, electrodomésticos y energía': 'ZONA DE REFLEXION\n\nTu casa toma decisiones que afectan privacidad y gasto económico. Pregunta concreta: ¿sabes exactamente qué datos envía cada dispositivo y a qué servidor? Si la respuesta es no, vale la pena 2 horas de auditoría con una herramienta como Pi-hole para ver el tráfico de red.',
+    'Casi todo — la casa toma la mayoría de decisiones': 'DEPENDENCIA ALTA\n\nEl "comfort trap" del MIT Media Lab. La conveniencia es real, pero también lo es que el sistema más completo de vigilancia de tu vida está en tu casa y probablemente enviando datos a múltiples empresas. La pregunta no es dejar de usarlo, sino saber qué está pasando.'
+  };
+  const r = document.getElementById('autonomy-result');
+  r.textContent = msgs[v] || '';
+  r.classList.add('show');
+}
+
+function checkQuiz(name, correct, explanation){
+  const sel = document.querySelector(`input[name="${name}"]:checked`);
+  const resEl = document.getElementById(name + '-result');
+  if(!resEl) return;
+  if(!sel){ resEl.textContent = 'Selecciona una opción primero'; resEl.classList.add('show'); return; }
+  resEl.classList.remove('ok','err');
+  if(sel.value === correct){
+    resEl.textContent = 'Correcto. ' + explanation;
+    resEl.classList.add('show','ok');
+  } else {
+    resEl.textContent = 'Incorrecto. ' + explanation;
+    resEl.classList.add('show','err');
+  }
+}
+
+function parseVoiceCmd(){
+  const cmd = document.getElementById('voice-cmd').value.toLowerCase().trim();
+  const r = document.getElementById('voice-result');
+  let out = '';
+  if(!cmd){ r.textContent = 'Escribe un comando para analizar'; r.classList.add('show'); return; }
+  if(/luz|luces|enciende|apaga|brillo|dimmer|foco/.test(cmd)){
+    const brightness = /50%|medio|mitad/.test(cmd) ? 128 : /10%|tenue/.test(cmd) ? 26 : 255;
+    const temp = /calidez|cálido|noche/.test(cmd) ? '2700K' : /fría|día/.test(cmd) ? '5600K' : '4000K';
+    out = `INTENT DETECTADO: light.turn_on\nENTIDAD: light.sala\nPARAMETROS:\n  brightness: ${brightness}\n  color_temp: ${temp}\n\nESTADO: EJECUTADO en 28ms (local)`;
+  } else if(/temperatura|termostato|frío|calor|grados/.test(cmd)){
+    const temp = cmd.match(/(\d+)\s*(grados|°|°c)?/)?.[1] || '22';
+    out = `INTENT DETECTADO: climate.set_temperature\nENTIDAD: climate.sala\nPARAMETROS:\n  temperature: ${temp}°C\n  hvac_mode: auto\n\nESTADO: EJECUTADO en 31ms (local)`;
+  } else if(/música|musica|pon|reproduce|canción|cancion/.test(cmd)){
+    out = `INTENT DETECTADO: media_player.play_media\nENTIDAD: media_player.salon\nPARAMETROS:\n  content_type: music\n  query: "${cmd}"\n\nESTADO: BUSCANDO en Spotify...`;
+  } else if(/alarma|cierra|abre|seguridad|bloquea/.test(cmd)){
+    out = `INTENT DETECTADO: alarm_control_panel / lock\nACCION: requiere confirmación de identidad\nPARAMETROS:\n  mode: arm_away\n\nESTADO: CONFIRMANDO identidad...`;
+  } else if(cmd.length >= 3){
+    out = `INTENT: no reconocido\n\nANALIZANDO: "${cmd.substring(0,40)}"\n\nEn Home Assistant esto se procesaría via intent scripts. Palabras clave útiles: "enciende", "apaga", "pon la temperatura a X grados", "reproduce música".`;
+  } else {
+    out = 'Escribe un comando más completo para analizar la estructura NLP.';
+  }
+  r.textContent = out;
+  r.classList.add('show','ok');
+}
+
+/* ══════════════════════════════════
+   TECLADO
+══════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closePanel();
+  if(e.key === '4') scrollToFloor(4);
+  if(e.key === '3') scrollToFloor(3);
+  if(e.key === '2') scrollToFloor(2);
+  if(e.key === '1') scrollToFloor(1);
+});
+
+/* ══════════════════════════════════
+   KONAMI / JUEGO SECRETO
+   Secuencia: ArUp ArUp ArDown ArDown ArLeft ArRight ArLeft ArRight b a
+══════════════════════════════════ */
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiIdx = 0;
+document.addEventListener('keydown', e => {
+  if(e.key === KONAMI[konamiIdx]){
+    konamiIdx++;
+    if(konamiIdx === KONAMI.length){ konamiIdx = 0; launchSecretGame(); }
+  } else {
+    konamiIdx = 0;
+  }
+});
+
+/* ══════════════════════════════════
+   JUEGO: SNAKE / EVADE SENSORES
+   Temática: eres un paquete de datos intentando escapar
+   antes de ser recopilado por Amazon
+══════════════════════════════════ */
+function launchSecretGame(){
+  const gameEl = document.getElementById('secret-game');
+  gameEl.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  showToast('ARCHIVO SECRETO DESBLOQUEADO — Konami code activado');
+
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CELL = 14;
+  const COLS = Math.floor(W/CELL), ROWS = Math.floor(H/CELL);
+
+  const COLORS = { bg:'#030508', snake:'#00e5a0', food:'#ff2a4a', head:'#00ffb3', text:'rgba(0,229,160,.5)' };
+
+  let snake, dir, nextDir, food, score, loop, alive;
+
+  function init(){
+    snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    dir = {x:1, y:0};
+    nextDir = {x:1, y:0};
+    score = 0;
+    alive = true;
+    placeFood();
+    if(loop) clearInterval(loop);
+    loop = setInterval(tick, 95);
+  }
+
+  function placeFood(){
+    do {
+      food = { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) };
+    } while(snake.some(s => s.x===food.x && s.y===food.y));
+  }
+
+  function tick(){
+    if(!alive) return;
+    dir = nextDir;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)){
+      alive = false;
+      clearInterval(loop);
+      draw();
+      return;
+    }
+    snake.unshift(head);
+    if(head.x===food.x&&head.y===food.y){
+      score++;
+      document.getElementById('game-score').textContent = 'DATOS RESCATADOS: ' + score;
+      placeFood();
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function draw(){
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0,0,W,H);
+
+    // grid subtle
+    ctx.strokeStyle = 'rgba(0,229,160,0.04)';
+    ctx.lineWidth = .5;
+    for(let x=0;x<COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,H); ctx.stroke(); }
+    for(let y=0;y<ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(W,y*CELL); ctx.stroke(); }
+
+    // food (sensor/amazon logo area)
+    ctx.fillStyle = COLORS.food;
+    ctx.fillRect(food.x*CELL+1, food.y*CELL+1, CELL-2, CELL-2);
+    ctx.fillStyle = 'rgba(255,42,74,.15)';
+    ctx.fillRect((food.x-1)*CELL, (food.y-1)*CELL, CELL*3, CELL*3);
+    ctx.font = '8px monospace';
+    ctx.fillStyle = 'rgba(255,42,74,.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText('AWS', food.x*CELL+CELL/2, food.y*CELL-3);
+
+    // snake
+    snake.forEach((s,i) => {
+      ctx.fillStyle = i===0 ? COLORS.head : COLORS.snake;
+      ctx.globalAlpha = i===0 ? 1 : 1 - (i/snake.length)*.5;
+      ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);
+    });
+    ctx.globalAlpha = 1;
+
+    if(!alive){
+      ctx.fillStyle = 'rgba(3,5,8,0.75)';
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#ff2a4a';
+      ctx.font = 'bold 22px Space Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('DATOS CAPTURADOS', W/2, H/2-20);
+      ctx.fillStyle = 'rgba(0,229,160,.7)';
+      ctx.font = '12px Space Mono, monospace';
+      ctx.fillText('Score: ' + score + '  |  Enter para reintentar', W/2, H/2+10);
+    }
+  }
+
+  const handleKey = e => {
+    const map = { ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1}, ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0} };
+    if(e.key === 'Escape'){
+      clearInterval(loop);
+      gameEl.classList.remove('active');
+      document.body.style.overflow = 'auto';
+      document.removeEventListener('keydown', handleKey);
+      return;
+    }
+    if(e.key === 'Enter' && !alive){ init(); return; }
+    if(map[e.key]){
+      const d = map[e.key];
+      if(!(d.x === -dir.x && d.y === -dir.y)) nextDir = d;
+    }
+    e.preventDefault();
+  };
+  document.addEventListener('keydown', handleKey);
+
+  init();
+}
+
+</script>
+</body>
+</html>
